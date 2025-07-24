@@ -24,74 +24,69 @@ export const KioskScanner: React.FC = () => {
     setIsScanning(false);
     
     try {
-      // Decode and validate the JWT token
-      const tokenData = JSON.parse(atob(qrData));
-      const { uid, amt, date, exp, jti } = tokenData;
+      // Decode employee QR code
+      const employeeData = JSON.parse(atob(qrData));
+      const { employeeId, empNo, name, type } = employeeData;
 
-      // Check if token is expired
-      if (exp < Math.floor(Date.now() / 1000)) {
+      // Validate it's an employee QR code
+      if (type !== 'employee_id' || !employeeId || !empNo || !name) {
         const result: ScanResult = {
           success: false,
-          message: "Coupon has expired",
+          message: "Invalid employee QR code",
           timestamp: new Date().toISOString()
         };
         addScanResult(result);
         return;
       }
 
-      // Check if it's for today
-      const today = new Date().toISOString().split('T')[0];
-      if (date !== today) {
-        const result: ScanResult = {
-          success: false,
-          message: "Coupon is not valid for today",
-          timestamp: new Date().toISOString()
-        };
-        addScanResult(result);
-        return;
-      }
-
-      // Check if already used
-      const usedKey = `used_${jti}`;
-      if (localStorage.getItem(usedKey)) {
-        const result: ScanResult = {
-          success: false,
-          message: "Coupon has already been used",
-          timestamp: new Date().toISOString()
-        };
-        addScanResult(result);
-        return;
-      }
-
-      // Get employee info from local storage (in real app, this would be from backend)
-      const allKeys = Object.keys(localStorage);
-      const employeeKey = allKeys.find(key => key.includes(uid) && key.includes('currentEmployee'));
-      let employeeName = "Unknown Employee";
+      // Check if it's a weekday
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
       
-      if (employeeKey) {
-        const employeeData = JSON.parse(localStorage.getItem(employeeKey) || '{}');
-        employeeName = employeeData.name || employeeName;
+      if (!isWeekday) {
+        const result: ScanResult = {
+          success: false,
+          employeeName: name,
+          employeeId: empNo,
+          message: "Meals are only available on weekdays",
+          timestamp: new Date().toISOString()
+        };
+        addScanResult(result);
+        return;
       }
 
-      // Mark as used
-      localStorage.setItem(usedKey, new Date().toISOString());
+      // Check if already redeemed today
+      const dateKey = today.toISOString().split('T')[0];
+      const redemptionKey = `redeemed_${employeeId}_${dateKey}`;
       
-      // Update the original coupon status
-      const couponKey = `coupon_${uid}_${date}`;
-      const couponData = localStorage.getItem(couponKey);
-      if (couponData) {
-        const coupon = JSON.parse(couponData);
-        coupon.status = 'used';
-        coupon.redeemedAt = new Date().toISOString();
-        localStorage.setItem(couponKey, JSON.stringify(coupon));
+      if (localStorage.getItem(redemptionKey)) {
+        const result: ScanResult = {
+          success: false,
+          employeeName: name,
+          employeeId: empNo,
+          message: "Meal already taken today",
+          timestamp: new Date().toISOString()
+        };
+        addScanResult(result);
+        
+        toast({
+          title: "Already Redeemed",
+          description: `${name} has already taken today's meal`,
+          variant: "destructive",
+        });
+        return;
       }
+
+      // Record the redemption
+      localStorage.setItem(redemptionKey, new Date().toISOString());
 
       const result: ScanResult = {
         success: true,
-        employeeName,
-        employeeId: uid,
-        amount: amt,
-        message: `Coupon successfully redeemed for ₹${amt}`,
+        employeeName: name,
+        employeeId: empNo,
+        amount: 160,
+        message: `Meal successfully provided for ₹160`,
         timestamp: new Date().toISOString()
       };
 
@@ -100,7 +95,7 @@ export const KioskScanner: React.FC = () => {
 
       toast({
         title: "Success!",
-        description: `Coupon redeemed for ${employeeName}`,
+        description: `Meal provided for ${name}`,
       });
 
     } catch (error) {
@@ -125,10 +120,10 @@ export const KioskScanner: React.FC = () => {
 
   const getTodayStats = () => {
     const today = new Date().toISOString().split('T')[0];
-    const usedToday = Object.keys(localStorage)
-      .filter(key => key.startsWith('used_') && key.includes(today))
+    const redeemedToday = Object.keys(localStorage)
+      .filter(key => key.startsWith('redeemed_') && key.includes(today))
       .length;
-    return usedToday;
+    return redeemedToday;
   };
 
   React.useEffect(() => {
