@@ -1,14 +1,166 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState, useEffect } from 'react';
+import { EmployeeLogin } from '@/components/EmployeeLogin';
+import { CouponDisplay } from '@/components/CouponDisplay';
+import { KioskScanner } from '@/components/KioskScanner';
+import { AdminDashboard } from '@/components/AdminDashboard';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+type AppMode = 'home' | 'employee' | 'kiosk' | 'admin';
+
+interface Employee {
+  id: string;
+  name: string;
+  empNo: string;
+}
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const [mode, setMode] = useState<AppMode>('home');
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+
+  useEffect(() => {
+    // Check if employee is already logged in
+    const savedEmployee = localStorage.getItem('currentEmployee');
+    if (savedEmployee && mode === 'employee') {
+      setCurrentEmployee(JSON.parse(savedEmployee));
+    }
+  }, [mode]);
+
+  const handleEmployeeLogin = (employee: Employee) => {
+    setCurrentEmployee(employee);
+  };
+
+  const handleEmployeeLogout = () => {
+    localStorage.removeItem('currentEmployee');
+    setCurrentEmployee(null);
+    setMode('home');
+  };
+
+  if (mode === 'home') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Card className="shadow-elevated text-center">
+            <CardHeader>
+              <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl">🍽️</span>
+              </div>
+              <CardTitle className="text-3xl">Employee Food Coupons</CardTitle>
+              <p className="text-muted-foreground">Digital meal coupon system for employees</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button
+                  onClick={() => setMode('employee')}
+                  variant="default"
+                  size="lg"
+                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
+                >
+                  <span className="text-2xl">👤</span>
+                  <span>Employee Portal</span>
+                </Button>
+                
+                <Button
+                  onClick={() => setMode('kiosk')}
+                  variant="secondary"
+                  size="lg"
+                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
+                >
+                  <span className="text-2xl">📱</span>
+                  <span>Kiosk Scanner</span>
+                </Button>
+                
+                <Button
+                  onClick={() => setMode('admin')}
+                  variant="outline"
+                  size="lg"
+                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
+                >
+                  <span className="text-2xl">📊</span>
+                  <span>Admin Dashboard</span>
+                </Button>
+              </div>
+              
+              <div className="text-center space-y-2 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Coupon Value:</strong> ₹160 per day
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Availability:</strong> Monday to Friday
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg">How it works</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-xl">1️⃣</span>
+                  </div>
+                  <p className="font-medium">Login & Claim</p>
+                  <p className="text-muted-foreground">Employees login and claim their daily coupon</p>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-xl">2️⃣</span>
+                  </div>
+                  <p className="font-medium">Show QR Code</p>
+                  <p className="text-muted-foreground">Present QR code at food kiosk</p>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <span className="text-xl">3️⃣</span>
+                  </div>
+                  <p className="font-medium">Scan & Redeem</p>
+                  <p className="text-muted-foreground">Kiosk scans and validates the coupon</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (mode === 'employee') {
+    if (!currentEmployee) {
+      return <EmployeeLogin onLogin={handleEmployeeLogin} />;
+    }
+    return <CouponDisplay employee={currentEmployee} onLogout={handleEmployeeLogout} />;
+  }
+
+  if (mode === 'kiosk') {
+    return (
+      <div>
+        <div className="fixed top-4 left-4 z-50">
+          <Button onClick={() => setMode('home')} variant="outline">
+            ← Back to Home
+          </Button>
+        </div>
+        <KioskScanner />
+      </div>
+    );
+  }
+
+  if (mode === 'admin') {
+    return (
+      <div>
+        <div className="fixed top-4 left-4 z-50">
+          <Button onClick={() => setMode('home')} variant="outline">
+            ← Back to Home
+          </Button>
+        </div>
+        <AdminDashboard />
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default Index;
