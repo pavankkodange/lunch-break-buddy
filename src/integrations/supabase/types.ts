@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meal_redemptions: {
+        Row: {
+          created_at: string
+          employee_number: string
+          id: string
+          redemption_date: string
+          redemption_time: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_number: string
+          id?: string
+          redemption_date?: string
+          redemption_time?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_number?: string
+          id?: string
+          redemption_date?: string
+          redemption_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_email: string
+          created_at: string
+          employee_number: string
+          full_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_email: string
+          created_at?: string
+          employee_number: string
+          full_name: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_email?: string
+          created_at?: string
+          employee_number?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
