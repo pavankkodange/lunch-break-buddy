@@ -17,6 +17,10 @@ const Index = () => {
     setMode('home');
   };
 
+  const handleBackToHome = () => {
+    setMode('home');
+  };
+
   const handleAuthSuccess = () => {
     // User is authenticated, they can access the employee portal
   };
@@ -125,9 +129,9 @@ const Index = () => {
 
   if (mode === 'employee') {
     if (!isAuthenticated) {
-      return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+      return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={handleBackToHome} />;
     }
-    return <CouponDisplay onLogout={handleEmployeeLogout} />;
+    return <CouponDisplay onLogout={handleEmployeeLogout} onBack={handleBackToHome} />;
   }
 
   if (mode === 'kiosk') {

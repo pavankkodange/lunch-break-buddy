@@ -8,9 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface CouponDisplayProps {
   onLogout: () => void;
+  onBack: () => void;
 }
 
-export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout }) => {
+export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }) => {
   const [isWeekday, setIsWeekday] = useState(false);
   const [todayRedeemed, setTodayRedeemed] = useState(false);
   const [redemptions, setRedemptions] = useState<any[]>([]);
@@ -76,6 +77,11 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
+      <div className="fixed top-4 left-4 z-50">
+        <Button onClick={onBack} variant="outline">
+          ← Back to Home
+        </Button>
+      </div>
       <div className="max-w-md mx-auto space-y-4">
         {/* Header */}
         <Card className="shadow-card">

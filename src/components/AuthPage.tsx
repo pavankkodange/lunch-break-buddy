@@ -9,9 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
+  onBack: () => void;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
@@ -133,6 +134,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent p-4">
+      <div className="fixed top-4 left-4 z-50">
+        <Button onClick={onBack} variant="outline">
+          ← Back to Home
+        </Button>
+      </div>
       <Card className="w-full max-w-md shadow-elevated">
         <CardHeader className="text-center">
           <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
