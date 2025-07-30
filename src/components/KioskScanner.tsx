@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Scanner } from './ui/scanner';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ScanResult {
   success: boolean;
@@ -56,11 +57,17 @@ export const KioskScanner: React.FC = () => {
         return;
       }
 
-      // Check if already redeemed today
+      // Check if already redeemed today in database
       const dateKey = today.toISOString().split('T')[0];
-      const redemptionKey = `redeemed_${employeeId}_${dateKey}`;
       
-      if (localStorage.getItem(redemptionKey)) {
+      const { data: existingRedemption } = await supabase
+        .from('meal_redemptions')
+        .select('*')
+        .eq('employee_number', empNo)
+        .eq('redemption_date', dateKey)
+        .single();
+      
+      if (existingRedemption) {
         const result: ScanResult = {
           success: false,
           employeeName: name,
@@ -78,8 +85,26 @@ export const KioskScanner: React.FC = () => {
         return;
       }
 
-      // Record the redemption
-      localStorage.setItem(redemptionKey, new Date().toISOString());
+      // Record the redemption in database
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('employee_number', empNo)
+        .single();
+
+      if (profile) {
+        const { error: redemptionError } = await supabase
+          .from('meal_redemptions')
+          .insert({
+            user_id: profile.user_id,
+            employee_number: empNo,
+            redemption_date: dateKey
+          });
+
+        if (redemptionError) {
+          console.error('Failed to record redemption:', redemptionError);
+        }
+      }
 
       const result: ScanResult = {
         success: true,
@@ -118,16 +143,18 @@ export const KioskScanner: React.FC = () => {
     setRecentScans(prev => [result, ...prev.slice(0, 9)]); // Keep last 10 scans
   };
 
-  const getTodayStats = () => {
+  const getTodayStats = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const redeemedToday = Object.keys(localStorage)
-      .filter(key => key.startsWith('redeemed_') && key.includes(today))
-      .length;
-    return redeemedToday;
+    const { data, count } = await supabase
+      .from('meal_redemptions')
+      .select('*', { count: 'exact' })
+      .eq('redemption_date', today);
+    
+    return count || 0;
   };
 
   React.useEffect(() => {
-    setDailyCount(getTodayStats());
+    getTodayStats().then(setDailyCount);
   }, []);
 
   return (

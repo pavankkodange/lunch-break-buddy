@@ -3,47 +3,76 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import QRCode from 'react-qr-code';
-
-interface Employee {
-  id: string;
-  name: string;
-  empNo: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CouponDisplayProps {
-  employee: Employee;
   onLogout: () => void;
 }
 
-export const CouponDisplay: React.FC<CouponDisplayProps> = ({ employee, onLogout }) => {
+export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout }) => {
   const [isWeekday, setIsWeekday] = useState(false);
   const [todayRedeemed, setTodayRedeemed] = useState(false);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
+  const { profile, signOut } = useAuth();
 
   useEffect(() => {
     checkWeekdayAndRedemption();
-  }, []);
+  }, [profile]);
+
+  useEffect(() => {
+    if (profile) {
+      fetchRedemptions();
+    }
+  }, [profile]);
+
+  const fetchRedemptions = async () => {
+    if (!profile) return;
+    
+    const { data, error } = await supabase
+      .from('meal_redemptions')
+      .select('*')
+      .eq('user_id', profile.user_id)
+      .order('redemption_date', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setRedemptions(data);
+      
+      // Check if redeemed today
+      const today = new Date().toISOString().split('T')[0];
+      const todayRedemption = data.find(r => r.redemption_date === today);
+      setTodayRedeemed(!!todayRedemption);
+    }
+  };
 
   const checkWeekdayAndRedemption = () => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const isWeekdayToday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
     setIsWeekday(isWeekdayToday);
-
-    // Check if already redeemed today
-    const dateKey = today.toISOString().split('T')[0];
-    const redemptionKey = `redeemed_${employee.id}_${dateKey}`;
-    setTodayRedeemed(!!localStorage.getItem(redemptionKey));
   };
 
   // Generate permanent employee QR code
   const generateEmployeeQR = () => {
+    if (!profile) return '';
+    
     return btoa(JSON.stringify({
-      employeeId: employee.id,
-      empNo: employee.empNo,
-      name: employee.name,
+      employeeId: profile.user_id,
+      empNo: profile.employee_number,
+      name: profile.full_name,
       type: 'employee_id'
     }));
   };
+
+  const handleLogout = async () => {
+    await signOut();
+    onLogout();
+  };
+
+  if (!profile) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
@@ -53,10 +82,10 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ employee, onLogout
           <CardHeader className="text-center pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">{employee.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">ID: {employee.empNo}</p>
+                <CardTitle className="text-lg">{profile.full_name}</CardTitle>
+                <p className="text-sm text-muted-foreground">ID: {profile.employee_number}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={onLogout}>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
                 Logout
               </Button>
             </div>
@@ -115,13 +144,32 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ employee, onLogout
                   />
                 </div>
                 <div className="text-center mt-4 space-y-1">
-                  <p className="text-sm font-medium">{employee.name}</p>
-                  <p className="text-xs text-muted-foreground">ID: {employee.empNo}</p>
+                  <p className="text-sm font-medium">{profile.full_name}</p>
+                  <p className="text-xs text-muted-foreground">ID: {profile.employee_number}</p>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Recent Redemptions */}
+        {redemptions.length > 0 && (
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Recent Meal History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {redemptions.slice(0, 5).map((redemption) => (
+                  <div key={redemption.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                    <span className="text-sm">{new Date(redemption.redemption_date).toLocaleDateString('en-IN')}</span>
+                    <Badge variant="secondary" className="text-xs">Redeemed</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Information */}
         <Card className="shadow-card">

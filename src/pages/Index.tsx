@@ -1,40 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { EmployeeLogin } from '@/components/EmployeeLogin';
+import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
 import { KioskScanner } from '@/components/KioskScanner';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
 
 type AppMode = 'home' | 'employee' | 'kiosk' | 'admin';
 
-interface Employee {
-  id: string;
-  name: string;
-  empNo: string;
-}
-
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
-  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
-
-  useEffect(() => {
-    // Check if employee is already logged in
-    const savedEmployee = localStorage.getItem('currentEmployee');
-    if (savedEmployee && mode === 'employee') {
-      setCurrentEmployee(JSON.parse(savedEmployee));
-    }
-  }, [mode]);
-
-  const handleEmployeeLogin = (employee: Employee) => {
-    setCurrentEmployee(employee);
-  };
+  const { isAuthenticated, loading } = useAuth();
 
   const handleEmployeeLogout = () => {
-    localStorage.removeItem('currentEmployee');
-    setCurrentEmployee(null);
     setMode('home');
   };
+
+  const handleAuthSuccess = () => {
+    // User is authenticated, they can access the employee portal
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl">🍽️</div>
+          <p className="mt-2">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (mode === 'home') {
     return (
@@ -128,10 +124,10 @@ const Index = () => {
   }
 
   if (mode === 'employee') {
-    if (!currentEmployee) {
-      return <EmployeeLogin onLogin={handleEmployeeLogin} />;
+    if (!isAuthenticated) {
+      return <AuthPage onAuthSuccess={handleAuthSuccess} />;
     }
-    return <CouponDisplay employee={currentEmployee} onLogout={handleEmployeeLogout} />;
+    return <CouponDisplay onLogout={handleEmployeeLogout} />;
   }
 
   if (mode === 'kiosk') {
