@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { CouponDisplay } from './CouponDisplay';
+import { KioskScanner } from './KioskScanner';
 
 interface DayStats {
   date: string;
@@ -14,6 +16,7 @@ interface DayStats {
 export const AdminDashboard: React.FC = () => {
   const [weeklyStats, setWeeklyStats] = useState<DayStats[]>([]);
   const [monthlyTotal, setMonthlyTotal] = useState({ redeemed: 0, value: 0 });
+  const [activeView, setActiveView] = useState<'dashboard' | 'employee' | 'kiosk'>('dashboard');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -136,6 +139,32 @@ export const AdminDashboard: React.FC = () => {
 
   const todayStats = getTodayStats();
 
+  if (activeView === 'employee') {
+    return (
+      <div>
+        <div className="fixed top-4 left-4 z-50">
+          <Button onClick={() => setActiveView('dashboard')} variant="outline">
+            ← Back to Admin Dashboard
+          </Button>
+        </div>
+        <CouponDisplay onLogout={() => setActiveView('dashboard')} onBack={() => setActiveView('dashboard')} />
+      </div>
+    );
+  }
+
+  if (activeView === 'kiosk') {
+    return (
+      <div>
+        <div className="fixed top-4 left-4 z-50">
+          <Button onClick={() => setActiveView('dashboard')} variant="outline">
+            ← Back to Admin Dashboard
+          </Button>
+        </div>
+        <KioskScanner />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -148,6 +177,37 @@ export const AdminDashboard: React.FC = () => {
             </CardTitle>
             <p className="text-muted-foreground">Monitor coupon usage and generate billing reports</p>
           </CardHeader>
+        </Card>
+
+        {/* Admin Quick Access */}
+        <Card className="shadow-elevated">
+          <CardHeader>
+            <CardTitle>Admin Access</CardTitle>
+            <p className="text-muted-foreground">Access all application features</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button
+                onClick={() => setActiveView('employee')}
+                variant="default"
+                size="lg"
+                className="h-20 flex flex-col gap-2 transition-spring hover:scale-105"
+              >
+                <span className="text-2xl">👤</span>
+                <span>Employee Portal</span>
+              </Button>
+              
+              <Button
+                onClick={() => setActiveView('kiosk')}
+                variant="secondary"
+                size="lg"
+                className="h-20 flex flex-col gap-2 transition-spring hover:scale-105"
+              >
+                <span className="text-2xl">📱</span>
+                <span>Kiosk Scanner</span>
+              </Button>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Key Metrics */}

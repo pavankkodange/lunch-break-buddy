@@ -151,6 +151,9 @@ const Index = () => {
   }
 
   if (mode === 'admin') {
+    if (!isAuthenticated) {
+      return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={handleBackToHome} />;
+    }
     return (
       <div>
         <div className="fixed top-4 left-4 z-50">
