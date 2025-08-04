@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["admin_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meal_redemptions: {
         Row: {
           created_at: string
@@ -76,10 +103,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_admin_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["admin_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      admin_role: "autorabit_admin" | "view_only_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -206,6 +236,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      admin_role: ["autorabit_admin", "view_only_admin"],
+    },
   },
 } as const

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { CouponDisplay } from './CouponDisplay';
 import { KioskScanner } from './KioskScanner';
 
@@ -18,6 +19,7 @@ export const AdminDashboard: React.FC = () => {
   const [monthlyTotal, setMonthlyTotal] = useState({ redeemed: 0, value: 0 });
   const [activeView, setActiveView] = useState<'dashboard' | 'employee' | 'kiosk'>('dashboard');
   const { toast } = useToast();
+  const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading } = useAdminRole();
 
   useEffect(() => {
     generateStats();
@@ -175,7 +177,12 @@ export const AdminDashboard: React.FC = () => {
               <span className="text-3xl">📊</span>
               Food Coupon Admin Dashboard
             </CardTitle>
-            <p className="text-muted-foreground">Monitor coupon usage and generate billing reports</p>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <p className="text-muted-foreground">Monitor coupon usage and generate billing reports</p>
+              <Badge variant={isAutorabitAdmin ? "default" : "secondary"}>
+                {isAutorabitAdmin ? "Autorabit Admin" : "View Only"}
+              </Badge>
+            </div>
           </CardHeader>
         </Card>
 
@@ -183,7 +190,9 @@ export const AdminDashboard: React.FC = () => {
         <Card className="shadow-elevated">
           <CardHeader>
             <CardTitle>Admin Access</CardTitle>
-            <p className="text-muted-foreground">Access all application features</p>
+            <p className="text-muted-foreground">
+              {isAutorabitAdmin ? "Access all application features" : "View-only access to all features"}
+            </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,6 +216,13 @@ export const AdminDashboard: React.FC = () => {
                 <span>Kiosk Scanner</span>
               </Button>
             </div>
+            {!isAutorabitAdmin && (
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground text-center">
+                  ⚠️ You have view-only access. Some features may be restricted.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -313,11 +329,17 @@ export const AdminDashboard: React.FC = () => {
 
               <Button 
                 onClick={exportMonthlyReport} 
+                disabled={!isAutorabitAdmin}
                 className="w-full transition-spring hover:scale-105"
                 size="lg"
               >
-                Export Monthly Report (CSV)
+                {isAutorabitAdmin ? "Export Monthly Report (CSV)" : "Export Restricted (Autorabit Only)"}
               </Button>
+              {!isAutorabitAdmin && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Only Autorabit administrators can export billing reports.
+                </p>
+              )}
 
               <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
