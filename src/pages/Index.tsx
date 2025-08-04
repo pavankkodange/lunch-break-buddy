@@ -29,7 +29,9 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-2xl">🍽️</div>
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+          </div>
           <p className="mt-2">Loading...</p>
         </div>
       </div>
@@ -42,8 +44,8 @@ const Index = () => {
         <div className="max-w-2xl mx-auto space-y-6">
           <Card className="shadow-elevated text-center">
             <CardHeader>
-              <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">🍽️</span>
+              <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4 p-3">
+                <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
               </div>
               <CardTitle className="text-3xl">Employee Food Coupons</CardTitle>
               <p className="text-muted-foreground">Digital meal coupon system for employees</p>
