@@ -86,6 +86,9 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
         {/* Header */}
         <Card className="shadow-card">
           <CardHeader className="text-center pb-3">
+            <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg">{profile.full_name}</CardTitle>

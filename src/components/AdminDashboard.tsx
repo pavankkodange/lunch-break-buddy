@@ -173,6 +173,9 @@ export const AdminDashboard: React.FC = () => {
         {/* Header */}
         <Card className="shadow-elevated">
           <CardHeader className="text-center">
+            <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+              <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+            </div>
             <CardTitle className="text-2xl flex items-center justify-center gap-3">
               <span className="text-3xl">📊</span>
               Food Coupon Admin Dashboard

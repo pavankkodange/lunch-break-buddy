@@ -141,8 +141,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       </div>
       <Card className="w-full max-w-md shadow-elevated">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">🍽️</span>
+          <div className="w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-2xl">Employee Food Coupons</CardTitle>
           <p className="text-muted-foreground">Access your meal coupon portal</p>
