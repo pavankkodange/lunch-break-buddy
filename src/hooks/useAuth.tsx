@@ -26,12 +26,28 @@ export const useAuth = () => {
         if (session?.user) {
           // Fetch user profile when authenticated
           setTimeout(async () => {
-            const { data: profileData } = await supabase
+            const { data: profileData, error } = await supabase
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .single();
-            setProfile(profileData);
+            
+            if (error && error.code === 'PGRST116') {
+              // Profile doesn't exist, create one from user metadata
+              const { data: newProfile } = await supabase
+                .from('profiles')
+                .insert({
+                  user_id: session.user.id,
+                  employee_number: session.user.user_metadata?.employee_number || '',
+                  full_name: session.user.user_metadata?.full_name || '',
+                  company_email: session.user.user_metadata?.company_email || session.user.email || ''
+                })
+                .select()
+                .single();
+              setProfile(newProfile);
+            } else {
+              setProfile(profileData);
+            }
           }, 0);
         } else {
           setProfile(null);
