@@ -6,12 +6,14 @@ import { AdminDashboard } from '@/components/AdminDashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 type AppMode = 'home' | 'employee' | 'kiosk' | 'admin';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
-  const { isAuthenticated, loading, signOut } = useAuth();
+  const { isAuthenticated, loading, signOut, isAutorabitEmployee, user } = useAuth();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     await signOut();
@@ -24,6 +26,18 @@ const Index = () => {
 
   const handleAuthSuccess = () => {
     // User is authenticated, show mode selection
+  };
+
+  const handleEmployeeAccess = () => {
+    if (!isAutorabitEmployee) {
+      toast({
+        title: "Access Denied",
+        description: "Employee portal is only available for Autorabit employees. Please use an @autorabit.com email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setMode('employee');
   };
 
   if (loading) {
@@ -60,13 +74,17 @@ const Index = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button
-                  onClick={() => setMode('employee')}
+                  onClick={handleEmployeeAccess}
                   variant="default"
                   size="lg"
                   className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
+                  disabled={!isAutorabitEmployee}
                 >
                   <span className="text-2xl">👤</span>
                   <span>Employee Portal</span>
+                  {!isAutorabitEmployee && (
+                    <span className="text-xs opacity-70">Autorabit employees only</span>
+                  )}
                 </Button>
                 
                 <Button
@@ -91,6 +109,9 @@ const Index = () => {
               </div>
               
               <div className="text-center space-y-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Logged in as:</strong> {user?.email}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   <strong>Coupon Value:</strong> ₹160 per day
                 </p>

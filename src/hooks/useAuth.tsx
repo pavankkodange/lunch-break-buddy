@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +16,10 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isAutorabitEmployee = (email: string) => {
+    return email.includes('@autorabit.com');
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -79,6 +84,7 @@ export const useAuth = () => {
     profile,
     loading,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    isAutorabitEmployee: user?.email ? isAutorabitEmployee(user.email) : false
   };
 };
