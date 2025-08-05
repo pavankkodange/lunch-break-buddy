@@ -11,9 +11,10 @@ type AppMode = 'home' | 'employee' | 'kiosk' | 'admin';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, signOut } = useAuth();
 
-  const handleEmployeeLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setMode('home');
   };
 
@@ -22,7 +23,7 @@ const Index = () => {
   };
 
   const handleAuthSuccess = () => {
-    // User is authenticated, they can access the employee portal
+    // User is authenticated, show mode selection
   };
 
   if (loading) {
@@ -38,6 +39,12 @@ const Index = () => {
     );
   }
 
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={() => {}} />;
+  }
+
+  // Show mode selection after authentication
   if (mode === 'home') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
@@ -83,13 +90,21 @@ const Index = () => {
                 </Button>
               </div>
               
-              <div className="text-center space-y-2 pt-4 border-t">
+              <div className="text-center space-y-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
                   <strong>Coupon Value:</strong> ₹160 per day
                 </p>
                 <p className="text-sm text-muted-foreground">
                   <strong>Availability:</strong> Monday to Friday
                 </p>
+                <Button 
+                  onClick={handleLogout}
+                  variant="outline" 
+                  size="sm"
+                  className="mt-4"
+                >
+                  Logout
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -130,16 +145,10 @@ const Index = () => {
   }
 
   if (mode === 'employee') {
-    if (!isAuthenticated) {
-      return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={handleBackToHome} />;
-    }
-    return <CouponDisplay onLogout={handleEmployeeLogout} onBack={handleBackToHome} />;
+    return <CouponDisplay onLogout={handleLogout} onBack={handleBackToHome} />;
   }
 
   if (mode === 'kiosk') {
-    if (!isAuthenticated) {
-      return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={handleBackToHome} />;
-    }
     return (
       <div>
         <div className="fixed top-4 left-4 z-50">
@@ -153,9 +162,6 @@ const Index = () => {
   }
 
   if (mode === 'admin') {
-    if (!isAuthenticated) {
-      return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={handleBackToHome} />;
-    }
     return (
       <div>
         <div className="fixed top-4 left-4 z-50">
