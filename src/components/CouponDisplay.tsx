@@ -15,7 +15,7 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
   const [isWeekday, setIsWeekday] = useState(false);
   const [todayRedeemed, setTodayRedeemed] = useState(false);
   const [redemptions, setRedemptions] = useState<any[]>([]);
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading, user } = useAuth();
 
   useEffect(() => {
     checkWeekdayAndRedemption();
@@ -71,8 +71,34 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
     onLogout();
   };
 
-  if (!profile) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+          </div>
+          <p className="mt-2">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+          </div>
+          <p className="text-lg font-semibold">Profile Setup Required</p>
+          <p className="text-muted-foreground">Unable to load your profile. Please contact support.</p>
+          <Button onClick={onBack} variant="outline">
+            ← Back to Home
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
