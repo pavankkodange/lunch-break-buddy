@@ -24,40 +24,56 @@ export const useAuth = () => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           // Fetch user profile when authenticated
           setTimeout(async () => {
-            const { data: profileData, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .single();
-            
-            if (error && error.code === 'PGRST116') {
-              // Profile doesn't exist, create one from user metadata
-              const { data: newProfile } = await supabase
+            try {
+              const { data: profileData, error } = await supabase
                 .from('profiles')
-                .insert({
-                  user_id: session.user.id,
-                  employee_number: session.user.user_metadata?.employee_number || '',
-                  full_name: session.user.user_metadata?.full_name || '',
-                  company_email: session.user.user_metadata?.company_email || session.user.email || ''
-                })
-                .select()
-                .single();
-              setProfile(newProfile);
-            } else {
-              setProfile(profileData);
+                .select('*')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+              
+              if (error) {
+                console.error('Profile fetch error:', error);
+                setProfile(null);
+              } else if (!profileData) {
+                // Profile doesn't exist, create one from user metadata
+                const { data: newProfile, error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    user_id: session.user.id,
+                    employee_number: session.user.user_metadata?.employee_number || '',
+                    full_name: session.user.user_metadata?.full_name || '',
+                    company_email: session.user.user_metadata?.company_email || session.user.email || ''
+                  })
+                  .select()
+                  .maybeSingle();
+                
+                if (insertError) {
+                  console.error('Profile creation error:', insertError);
+                  setProfile(null);
+                } else {
+                  setProfile(newProfile);
+                }
+              } else {
+                setProfile(profileData);
+              }
+            } catch (err) {
+              console.error('Profile operation error:', err);
+              setProfile(null);
+            } finally {
+              setLoading(false);
             }
           }, 0);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -65,7 +81,9 @@ export const useAuth = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (!session) {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
