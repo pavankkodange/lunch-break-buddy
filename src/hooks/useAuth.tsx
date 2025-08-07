@@ -25,6 +25,7 @@ export const useAuth = () => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -32,6 +33,9 @@ export const useAuth = () => {
           // Fetch user profile when authenticated
           setTimeout(async () => {
             try {
+              console.log('Fetching profile for user:', session.user.id);
+              
+              // First try to get existing profile
               const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -41,13 +45,17 @@ export const useAuth = () => {
               if (error) {
                 console.error('Profile fetch error:', error);
                 setProfile(null);
-              } else if (!profileData) {
-                // Profile doesn't exist, create one from user metadata
+              } else if (profileData) {
+                console.log('Profile found:', profileData);
+                setProfile(profileData);
+              } else {
+                console.log('No profile found, creating one...');
+                // Profile doesn't exist, create one manually since trigger might have failed
                 const { data: newProfile, error: insertError } = await supabase
                   .from('profiles')
                   .insert({
                     user_id: session.user.id,
-                    employee_number: session.user.user_metadata?.employee_number || '',
+                    employee_number: session.user.user_metadata?.employee_number || session.user.id.substring(0, 8),
                     full_name: session.user.user_metadata?.full_name || '',
                     company_email: session.user.user_metadata?.company_email || session.user.email || ''
                   })
@@ -58,10 +66,9 @@ export const useAuth = () => {
                   console.error('Profile creation error:', insertError);
                   setProfile(null);
                 } else {
+                  console.log('Profile created:', newProfile);
                   setProfile(newProfile);
                 }
-              } else {
-                setProfile(profileData);
               }
             } catch (err) {
               console.error('Profile operation error:', err);
@@ -79,6 +86,7 @@ export const useAuth = () => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
