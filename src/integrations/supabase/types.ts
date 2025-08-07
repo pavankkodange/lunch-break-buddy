@@ -41,6 +41,57 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          company_address: string | null
+          company_name: string
+          contact_number: string | null
+          coupon_value: number | null
+          created_at: string
+          currency: string | null
+          email: string | null
+          favicon_url: string | null
+          gst_number: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_name?: string
+          contact_number?: string | null
+          coupon_value?: number | null
+          created_at?: string
+          currency?: string | null
+          email?: string | null
+          favicon_url?: string | null
+          gst_number?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_name?: string
+          contact_number?: string | null
+          coupon_value?: number | null
+          created_at?: string
+          currency?: string | null
+          email?: string | null
+          favicon_url?: string | null
+          gst_number?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meal_redemptions: {
         Row: {
           created_at: string
