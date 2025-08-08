@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,7 +16,8 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const isCreatingProfile = useRef(false);
+  const currentUserId = useRef<string | null>(null);
 
   const isAutorabitEmployee = (email: string) => {
     return email.includes('@autorabit.com');
@@ -31,16 +32,18 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Skip if already processing this user or if already creating profile
+          if (currentUserId.current === session.user.id && isCreatingProfile.current) {
+            console.log('Profile operation already in progress for this user, skipping');
+            return;
+          }
+          
           // Fetch user profile when authenticated
-          setTimeout(async () => {
-            // Prevent race conditions - only allow one profile operation at a time
-            if (isCreatingProfile) {
-              console.log('Profile operation already in progress, skipping');
-              return;
-            }
-            
+          setTimeout(async () => {            
             try {
-              setIsCreatingProfile(true);
+              // Set flags to prevent race conditions
+              isCreatingProfile.current = true;
+              currentUserId.current = session.user.id;
               console.log('Fetching profile for user:', session.user.id);
               
               // First try to get existing profile
@@ -75,6 +78,8 @@ export const useAuth = () => {
                   // If it's a duplicate key error, try to fetch the existing profile
                   if (insertError.code === '23505') {
                     console.log('Duplicate key error, attempting to fetch existing profile...');
+                    // Add a small delay and retry fetching
+                    await new Promise(resolve => setTimeout(resolve, 100));
                     const { data: existingProfile } = await supabase
                       .from('profiles')
                       .select('*')
@@ -99,7 +104,7 @@ export const useAuth = () => {
               console.error('Profile operation error:', err);
               setProfile(null);
             } finally {
-              setIsCreatingProfile(false);
+              isCreatingProfile.current = false;
               setLoading(false);
             }
           }, 0);
