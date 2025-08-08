@@ -16,6 +16,7 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 
   const isAutorabitEmployee = (email: string) => {
     return email.includes('@autorabit.com');
@@ -32,7 +33,14 @@ export const useAuth = () => {
         if (session?.user) {
           // Fetch user profile when authenticated
           setTimeout(async () => {
+            // Prevent race conditions - only allow one profile operation at a time
+            if (isCreatingProfile) {
+              console.log('Profile operation already in progress, skipping');
+              return;
+            }
+            
             try {
+              setIsCreatingProfile(true);
               console.log('Fetching profile for user:', session.user.id);
               
               // First try to get existing profile
@@ -64,7 +72,24 @@ export const useAuth = () => {
                 
                 if (insertError) {
                   console.error('Profile creation error:', insertError);
-                  setProfile(null);
+                  // If it's a duplicate key error, try to fetch the existing profile
+                  if (insertError.code === '23505') {
+                    console.log('Duplicate key error, attempting to fetch existing profile...');
+                    const { data: existingProfile } = await supabase
+                      .from('profiles')
+                      .select('*')
+                      .eq('user_id', session.user.id)
+                      .maybeSingle();
+                    
+                    if (existingProfile) {
+                      console.log('Found existing profile after duplicate error:', existingProfile);
+                      setProfile(existingProfile);
+                    } else {
+                      setProfile(null);
+                    }
+                  } else {
+                    setProfile(null);
+                  }
                 } else {
                   console.log('Profile created:', newProfile);
                   setProfile(newProfile);
@@ -74,6 +99,7 @@ export const useAuth = () => {
               console.error('Profile operation error:', err);
               setProfile(null);
             } finally {
+              setIsCreatingProfile(false);
               setLoading(false);
             }
           }, 0);
