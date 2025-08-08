@@ -62,10 +62,25 @@ export const useAuth = () => {
               } else {
                 console.log('No profile found, creating one...');
                 // Profile doesn't exist, create one manually since trigger might have failed
-                // Generate a unique employee number if not provided
                 let employeeNumber = session.user.user_metadata?.employee_number;
+                
+                // Check if the employee number already exists for a different user
+                if (employeeNumber) {
+                  const { data: existingByNumber } = await supabase
+                    .from('profiles')
+                    .select('user_id, employee_number')
+                    .eq('employee_number', employeeNumber)
+                    .maybeSingle();
+                  
+                  // If employee number exists for different user, generate a new one
+                  if (existingByNumber && existingByNumber.user_id !== session.user.id) {
+                    console.log(`Employee number ${employeeNumber} exists for different user, generating new one`);
+                    employeeNumber = `EMP${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
+                  }
+                }
+                
+                // If still no employee number, generate one
                 if (!employeeNumber) {
-                  // Use timestamp + random to ensure uniqueness
                   employeeNumber = `EMP${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
                 }
                 
