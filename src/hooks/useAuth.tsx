@@ -62,11 +62,18 @@ export const useAuth = () => {
               } else {
                 console.log('No profile found, creating one...');
                 // Profile doesn't exist, create one manually since trigger might have failed
+                // Generate a unique employee number if not provided
+                let employeeNumber = session.user.user_metadata?.employee_number;
+                if (!employeeNumber) {
+                  // Use timestamp + random to ensure uniqueness
+                  employeeNumber = `EMP${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
+                }
+                
                 const { data: newProfile, error: insertError } = await supabase
                   .from('profiles')
                   .insert({
                     user_id: session.user.id,
-                    employee_number: session.user.user_metadata?.employee_number || session.user.id.substring(0, 8),
+                    employee_number: employeeNumber,
                     full_name: session.user.user_metadata?.full_name || '',
                     company_email: session.user.user_metadata?.company_email || session.user.email || ''
                   })
