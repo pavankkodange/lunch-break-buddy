@@ -46,81 +46,24 @@ export const useAuth = () => {
               currentUserId.current = session.user.id;
               console.log('Fetching profile for user:', session.user.id);
               
-              // First try to get existing profile
-              const { data: profileData, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
-              
-              if (error) {
-                console.error('Profile fetch error:', error);
+              // Create or fetch profile via RPC to avoid duplicates
+              const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
+                p_user_id: session.user.id,
+                p_employee_number: session.user.user_metadata?.employee_number || null,
+                p_full_name: session.user.user_metadata?.full_name || '',
+                p_company_email: session.user.user_metadata?.company_email || session.user.email || ''
+              });
+
+              if (rpcError) {
+                console.error('Profile RPC error:', rpcError);
                 setProfile(null);
-              } else if (profileData) {
-                console.log('Profile found:', profileData);
-                setProfile(profileData);
+              } else if (rpcData && rpcData.length > 0) {
+                const { id, user_id, employee_number, full_name, company_email } = rpcData[0];
+                console.log('Profile upserted/fetched via RPC:', rpcData[0]);
+                setProfile({ id, user_id, employee_number, full_name, company_email });
               } else {
-                console.log('No profile found, creating one...');
-                // Profile doesn't exist, create one manually since trigger might have failed
-                let employeeNumber = session.user.user_metadata?.employee_number;
-                
-                // Check if the employee number already exists for a different user
-                if (employeeNumber) {
-                  const { data: existingByNumber } = await supabase
-                    .from('profiles')
-                    .select('user_id, employee_number')
-                    .eq('employee_number', employeeNumber)
-                    .maybeSingle();
-                  
-                  // If employee number exists for different user, generate a new one
-                  if (existingByNumber && existingByNumber.user_id !== session.user.id) {
-                    console.log(`Employee number ${employeeNumber} exists for different user, generating new one`);
-                    employeeNumber = `EMP${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
-                  }
-                }
-                
-                // If still no employee number, generate one
-                if (!employeeNumber) {
-                  employeeNumber = `EMP${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
-                }
-                
-                const { data: newProfile, error: insertError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    user_id: session.user.id,
-                    employee_number: employeeNumber,
-                    full_name: session.user.user_metadata?.full_name || '',
-                    company_email: session.user.user_metadata?.company_email || session.user.email || ''
-                  })
-                  .select()
-                  .maybeSingle();
-                
-                if (insertError) {
-                  console.error('Profile creation error:', insertError);
-                  // If it's a duplicate key error, try to fetch the existing profile
-                  if (insertError.code === '23505') {
-                    console.log('Duplicate key error, attempting to fetch existing profile...');
-                    // Add a small delay and retry fetching
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    const { data: existingProfile } = await supabase
-                      .from('profiles')
-                      .select('*')
-                      .eq('user_id', session.user.id)
-                      .maybeSingle();
-                    
-                    if (existingProfile) {
-                      console.log('Found existing profile after duplicate error:', existingProfile);
-                      setProfile(existingProfile);
-                    } else {
-                      setProfile(null);
-                    }
-                  } else {
-                    setProfile(null);
-                  }
-                } else {
-                  console.log('Profile created:', newProfile);
-                  setProfile(newProfile);
-                }
+                console.warn('Profile RPC returned no data');
+                setProfile(null);
               }
             } catch (err) {
               console.error('Profile operation error:', err);
