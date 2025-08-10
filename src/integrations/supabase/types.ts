@@ -157,6 +157,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_or_get_profile: {
+        Args: {
+          p_user_id: string
+          p_employee_number?: string
+          p_full_name?: string
+          p_company_email?: string
+        }
+        Returns: {
+          id: string
+          user_id: string
+          employee_number: string
+          full_name: string
+          company_email: string
+          department: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_user_admin_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
