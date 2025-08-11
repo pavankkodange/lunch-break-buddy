@@ -3,12 +3,13 @@ import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
 import { KioskScanner } from '@/components/KioskScanner';
 import { AdminDashboard } from '@/components/AdminDashboard';
+import { ProfileEdit } from '@/components/ProfileEdit';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'kiosk' | 'admin';
+type AppMode = 'home' | 'employee' | 'kiosk' | 'admin' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -118,14 +119,22 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   <strong>Availability:</strong> Monday to Friday
                 </p>
-                <Button 
-                  onClick={handleLogout}
-                  variant="outline" 
-                  size="sm"
-                  className="mt-4"
-                >
-                  Logout
-                </Button>
+                <div className="flex gap-2 justify-center mt-4">
+                  <Button 
+                    onClick={() => setMode('profile')}
+                    variant="secondary" 
+                    size="sm"
+                  >
+                    Edit Profile
+                  </Button>
+                  <Button 
+                    onClick={handleLogout}
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Logout
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -193,6 +202,10 @@ const Index = () => {
         <AdminDashboard />
       </div>
     );
+  }
+
+  if (mode === 'profile') {
+    return <ProfileEdit onBack={handleBackToHome} />;
   }
 
   return null;

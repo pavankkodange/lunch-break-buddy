@@ -9,6 +9,7 @@ interface Profile {
   employee_number: string;
   full_name: string;
   company_email: string;
+  department: string | null;
 }
 
 export const useAuth = () => {
@@ -58,9 +59,9 @@ export const useAuth = () => {
                 console.error('Profile RPC error:', rpcError);
                 setProfile(null);
               } else if (rpcData && rpcData.length > 0) {
-                const { id, user_id, employee_number, full_name, company_email } = rpcData[0];
+                const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
                 console.log('Profile upserted/fetched via RPC:', rpcData[0]);
-                setProfile({ id, user_id, employee_number, full_name, company_email });
+                setProfile({ id, user_id, employee_number, full_name, company_email, department });
               } else {
                 console.warn('Profile RPC returned no data');
                 setProfile(null);
