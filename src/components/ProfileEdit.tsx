@@ -57,35 +57,51 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
     setLoading(true);
 
     try {
-      // Check if employee number is already taken by another user
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('employee_number', formData.employee_number)
-        .neq('user_id', profile.user_id)
-        .maybeSingle();
+      console.log('Starting profile update for user:', profile.user_id);
+      console.log('Updating employee number to:', formData.employee_number);
+      console.log('Current employee number:', profile.employee_number);
 
-      if (checkError) {
-        console.error('Error checking employee number:', checkError);
-        toast({
-          title: "Error",
-          description: "Failed to validate employee number. Please try again.",
-          variant: "destructive"
-        });
-        return;
+      // Skip employee number check if it's the same as current
+      if (formData.employee_number.trim() !== profile.employee_number) {
+        console.log('Checking if employee number is available...');
+        
+        // Check if employee number is already taken by another user
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('user_id, employee_number')
+          .eq('employee_number', formData.employee_number.trim())
+          .neq('user_id', profile.user_id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('Error checking employee number:', checkError);
+          toast({
+            title: "Validation Error",
+            description: `Failed to validate employee number: ${checkError.message}`,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (existingProfile) {
+          console.log('Employee number already taken by user:', existingProfile.user_id);
+          toast({
+            title: "Employee Number Taken",
+            description: `Employee number "${formData.employee_number}" is already in use. Please choose a different one.`,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        console.log('Employee number is available');
+      } else {
+        console.log('Employee number unchanged, skipping validation');
       }
 
-      if (existingProfile) {
-        toast({
-          title: "Employee Number Taken",
-          description: "This employee number is already in use. Please choose a different one.",
-          variant: "destructive"
-        });
-        return;
-      }
+      console.log('Proceeding with profile update...');
 
       // Update the profile
-      const { error: updateError } = await supabase
+      const { error: updateError, data: updateData } = await supabase
         .from('profiles')
         .update({
           employee_number: formData.employee_number.trim(),
@@ -93,31 +109,52 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
           company_email: formData.company_email.trim(),
           department: formData.department || null
         })
-        .eq('user_id', profile.user_id);
+        .eq('user_id', profile.user_id)
+        .select();
 
       if (updateError) {
         console.error('Error updating profile:', updateError);
-        toast({
-          title: "Error",
-          description: "Failed to update profile. Please try again.",
-          variant: "destructive"
-        });
+        
+        // Provide more specific error messages
+        if (updateError.code === '23505') {
+          toast({
+            title: "Duplicate Employee Number",
+            description: `Employee number "${formData.employee_number}" is already in use. Please choose a unique employee number.`,
+            variant: "destructive"
+          });
+        } else if (updateError.message.includes('violates row-level security')) {
+          toast({
+            title: "Permission Error",
+            description: "You don't have permission to update this profile. Please try logging out and back in.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Update Failed",
+            description: `Failed to update profile: ${updateError.message}`,
+            variant: "destructive"
+          });
+        }
         return;
       }
 
+      console.log('Profile updated successfully:', updateData);
+
       toast({
         title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
+        description: "Your profile has been successfully updated. Changes will be visible after refreshing.",
       });
 
-      // Go back to previous screen
-      onBack();
+      // Small delay to allow user to see the success message
+      setTimeout(() => {
+        onBack();
+      }, 1500);
 
     } catch (error) {
       console.error('Profile update error:', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Unexpected Error",
+        description: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
