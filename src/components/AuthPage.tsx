@@ -85,12 +85,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
           console.error('Profile creation error:', profileError);
         }
 
-        toast({
-          title: "Account Created!",
-          description: "Please check your email to verify your account.",
-        });
-        
-        onAuthSuccess();
+        if (data.user.email_confirmed_at) {
+          toast({
+            title: "Account Created!",
+            description: "Your account has been created successfully.",
+          });
+          onAuthSuccess();
+        } else {
+          toast({
+            title: "Account Created!",
+            description: "Please check your email and click the verification link before signing in.",
+          });
+          // Don't call onAuthSuccess() yet - user needs to verify email first
+        }
       }
     } catch (error: any) {
       toast({
@@ -122,9 +129,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       
       onAuthSuccess();
     } catch (error: any) {
+      let errorMessage = error.message || "Failed to sign in.";
+      
+      if (error.message === "Invalid login credentials") {
+        errorMessage = "Invalid email or password. Please check your credentials and ensure your email is verified.";
+      } else if (error.message === "Email not confirmed") {
+        errorMessage = "Please check your email and click the verification link before signing in.";
+      }
+      
       toast({
         title: "Sign In Failed",
-        description: error.message || "Failed to sign in.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
