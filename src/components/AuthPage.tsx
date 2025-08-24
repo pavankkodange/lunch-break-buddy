@@ -71,20 +71,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       if (error) throw error;
 
       if (data.user) {
-        // Create profile record
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            employee_number: signupData.employeeNumber,
-            full_name: signupData.fullName,
-            company_email: signupData.email
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-        }
-
         if (data.user.email_confirmed_at) {
           toast({
             title: "Account Created!",
