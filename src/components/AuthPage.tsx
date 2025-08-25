@@ -43,7 +43,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       return;
     }
 
-    if (!signupData.email.includes('@company.') && !signupData.email.includes('@')) {
+    if (!signupData.email.includes('@')) {
       toast({
         title: "Invalid Email",
         description: "Please use your company email address.",
@@ -59,7 +59,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
         email: signupData.email,
         password: signupData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}`,
           data: {
             employee_number: signupData.employeeNumber,
             full_name: signupData.fullName,
@@ -82,10 +82,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             title: "Account Created!",
             description: "Please check your email and click the verification link before signing in.",
           });
-          // Don't call onAuthSuccess() yet - user needs to verify email first
         }
       }
     } catch (error: any) {
+      console.error('Sign up error:', error);
       toast({
         title: "Sign Up Failed",
         description: error.message || "Failed to create account.",
@@ -115,6 +115,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       
       onAuthSuccess();
     } catch (error: any) {
+      console.error('Sign in error:', error);
       let errorMessage = error.message || "Failed to sign in.";
       
       if (error.message === "Invalid login credentials") {

@@ -25,10 +25,15 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
+        
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -39,66 +44,90 @@ export const useAuth = () => {
             return;
           }
           
-          // Fetch user profile when authenticated
-          setTimeout(async () => {            
-            try {
-              // Set flags to prevent race conditions
-              isCreatingProfile.current = true;
-              currentUserId.current = session.user.id;
-              console.log('Fetching profile for user:', session.user.id);
-              
-              // Create or fetch profile via RPC to avoid duplicates
-              const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
-                p_user_id: session.user.id,
-                p_employee_number: session.user.user_metadata?.employee_number || null,
-                p_full_name: session.user.user_metadata?.full_name || '',
-                p_company_email: session.user.user_metadata?.company_email || session.user.email || ''
-              });
+          try {
+            // Set flags to prevent race conditions
+            isCreatingProfile.current = true;
+            currentUserId.current = session.user.id;
+            console.log('Fetching profile for user:', session.user.id);
+            
+            // Create or fetch profile via RPC to avoid duplicates
+            const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
+              p_user_id: session.user.id,
+              p_employee_number: session.user.user_metadata?.employee_number || null,
+              p_full_name: session.user.user_metadata?.full_name || '',
+              p_company_email: session.user.user_metadata?.company_email || session.user.email || ''
+            });
 
-              if (rpcError) {
-                console.error('Profile RPC error:', rpcError);
-                setProfile(null);
-              } else if (rpcData && rpcData.length > 0) {
-                const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
-                console.log('Profile upserted/fetched via RPC:', rpcData[0]);
-                setProfile({ id, user_id, employee_number, full_name, company_email, department });
-              } else {
-                console.warn('Profile RPC returned no data');
-                setProfile(null);
-              }
-            } catch (err) {
-              console.error('Profile operation error:', err);
+            if (!mounted) return;
+
+            if (rpcError) {
+              console.error('Profile RPC error:', rpcError);
               setProfile(null);
-            } finally {
-              isCreatingProfile.current = false;
-              setLoading(false);
+            } else if (rpcData && rpcData.length > 0) {
+              const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
+              console.log('Profile upserted/fetched via RPC:', rpcData[0]);
+              setProfile({ id, user_id, employee_number, full_name, company_email, department });
+            } else {
+              console.warn('Profile RPC returned no data');
+              setProfile(null);
             }
-          }, 0);
+          } catch (err) {
+            console.error('Profile operation error:', err);
+            if (mounted) setProfile(null);
+          } finally {
+            isCreatingProfile.current = false;
+            if (mounted) setLoading(false);
+          }
         } else {
-          setProfile(null);
-          setLoading(false);
+          if (mounted) {
+            setProfile(null);
+            setLoading(false);
+          }
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+        if (!mounted) return;
+        
       console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
         setLoading(false);
       }
-    });
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        if (mounted) setLoading(false);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+      }
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
   };
 
   return {
