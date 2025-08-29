@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { MapPin, Shield } from 'lucide-react';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
@@ -38,8 +39,122 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
+  // Geofencing state
+  const [locationStatus, setLocationStatus] = useState<'checking' | 'allowed' | 'denied' | 'outside'>('checking');
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  // Office coordinates based on Plus Code C9MF+PW Hyderabad, Telangana
+  // Approximate coordinates: 17.4166°N, 78.4749°E
+  const OFFICE_LOCATION = { lat: 17.4166, lng: 78.4749 };
+  const OFFICE_RADIUS_METERS = 200; // Allow login within 200 meters of office
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  };
+
+  // Check if user is within office location
+  const checkLocationPermission = async () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('denied');
+      toast({
+        title: 'Geolocation Not Supported',
+        description: 'Your browser does not support location services.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      setLocationStatus('checking');
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          
+          const distance = calculateDistance(
+            latitude, 
+            longitude, 
+            OFFICE_LOCATION.lat, 
+            OFFICE_LOCATION.lng
+          );
+          
+          console.log('User location:', { latitude, longitude });
+          console.log('Office location:', OFFICE_LOCATION);
+          console.log('Distance from office:', Math.round(distance), 'meters');
+          
+          if (distance <= OFFICE_RADIUS_METERS) {
+            setLocationStatus('allowed');
+            toast({
+              title: 'Location Verified',
+              description: `You are ${Math.round(distance)}m from the office.`,
+            });
+            resolve(true);
+          } else {
+            setLocationStatus('outside');
+            toast({
+              title: 'Location Restricted',
+              description: `You must be within ${OFFICE_RADIUS_METERS}m of the office to login. Currently ${Math.round(distance)}m away.`,
+              variant: 'destructive'
+            });
+            resolve(false);
+          }
+        },
+        (error) => {
+          console.error('Location error:', error);
+          setLocationStatus('denied');
+          
+          let errorMessage = 'Unable to access your location.';
+          if (error.code === 1) {
+            errorMessage = 'Location access denied. Please allow location access and try again.';
+          } else if (error.code === 2) {
+            errorMessage = 'Location unavailable. Please check your device settings.';
+          } else if (error.code === 3) {
+            errorMessage = 'Location request timed out. Please try again.';
+          }
+          
+          toast({
+            title: 'Location Access Required',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          resolve(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000 // Cache location for 1 minute
+        }
+      );
+    });
+  };
+
+  // Check location on component mount
+  useEffect(() => {
+    checkLocationPermission();
+  }, []);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check location first for signup as well
+    if (locationStatus !== 'allowed') {
+      const isLocationVerified = await checkLocationPermission();
+      if (!isLocationVerified) {
+        return;
+      }
+    }
     
     if (signupData.password !== signupData.confirmPassword) {
       toast({
@@ -105,6 +220,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check location first
+    if (locationStatus !== 'allowed') {
+      const isLocationVerified = await checkLocationPermission();
+      if (!isLocationVerified) {
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     try {
@@ -414,10 +538,51 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                       />
                     </div>
                     
+                    {/* Location Status Indicator */}
+                    <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        {locationStatus === 'checking' && (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            <span className="text-sm text-muted-foreground">Checking location...</span>
+                          </>
+                        )}
+                        {locationStatus === 'allowed' && (
+                          <>
+                            <Shield className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-600">Location verified ✓</span>
+                          </>
+                        )}
+                        {locationStatus === 'outside' && (
+                          <>
+                            <MapPin className="h-4 w-4 text-red-600" />
+                            <span className="text-sm text-red-600">Must be at office location</span>
+                          </>
+                        )}
+                        {locationStatus === 'denied' && (
+                          <>
+                            <MapPin className="h-4 w-4 text-orange-600" />
+                            <span className="text-sm text-orange-600">Location access required</span>
+                          </>
+                        )}
+                      </div>
+                      {(locationStatus === 'denied' || locationStatus === 'outside') && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={checkLocationPermission}
+                          disabled={isLoading}
+                        >
+                          Retry
+                        </Button>
+                      )}
+                    </div>
+                    
                     <Button 
                       type="submit"
                       className="w-full transition-spring hover:scale-105"
-                      disabled={isLoading}
+                      disabled={isLoading || locationStatus !== 'allowed'}
                     >
                       {isLoading ? "Signing In..." : "Sign In"}
                     </Button>
@@ -547,10 +712,51 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                   />
                 </div>
                 
+                {/* Location Status Indicator */}
+                <div className="flex items-center justify-center space-x-2 p-3 rounded-lg border">
+                  <div className="flex items-center space-x-2">
+                    {locationStatus === 'checking' && (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="text-sm text-muted-foreground">Checking location...</span>
+                      </>
+                    )}
+                    {locationStatus === 'allowed' && (
+                      <>
+                        <Shield className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-600">Location verified ✓</span>
+                      </>
+                    )}
+                    {locationStatus === 'outside' && (
+                      <>
+                        <MapPin className="h-4 w-4 text-red-600" />
+                        <span className="text-sm text-red-600">Must be at office location</span>
+                      </>
+                    )}
+                    {locationStatus === 'denied' && (
+                      <>
+                        <MapPin className="h-4 w-4 text-orange-600" />
+                        <span className="text-sm text-orange-600">Location access required</span>
+                      </>
+                    )}
+                  </div>
+                  {(locationStatus === 'denied' || locationStatus === 'outside') && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={checkLocationPermission}
+                      disabled={isLoading}
+                    >
+                      Retry
+                    </Button>
+                  )}
+                </div>
+                
                 <Button 
                   type="submit"
                   className="w-full transition-spring hover:scale-105"
-                  disabled={isLoading}
+                  disabled={isLoading || locationStatus !== 'allowed'}
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
@@ -558,9 +764,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             </TabsContent>
           </Tabs>
           
-          <div className="text-center text-sm text-muted-foreground mt-4">
+          <div className="text-center text-sm text-muted-foreground mt-4 space-y-2">
             <p>Daily coupon value: ₹160</p>
-            <p className="text-xs mt-1">Available Monday to Friday</p>
+            <p className="text-xs">Available Monday to Friday</p>
+            <div className="flex items-center justify-center space-x-1 text-xs">
+              <MapPin className="h-3 w-3" />
+              <span>Office location access required (Plus Code: C9MF+PW)</span>
+            </div>
           </div>
         </CardContent>
       </Card>
