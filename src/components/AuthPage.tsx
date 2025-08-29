@@ -147,7 +147,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: 'https://f8fe9401-8b63-4363-ae21-b380386f0616.lovableproject.com/?recovery=1'
+        redirectTo: 'https://f8fe9401-8b63-4363-ae21-b380386f0616.lovableproject.com/'
       });
 
       if (error) throw error;
@@ -171,9 +171,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     }
   };
 
-  // Listen for Supabase password recovery and handle OTP verification
+  // Listen for Supabase password recovery and handle code/token verification
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change during recovery:', event, session?.user?.email);
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordUpdateMode(true);
       }
@@ -181,26 +182,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
     const handleRecoveryToken = async () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
+      const code = urlParams.get('code');
+      const tokenHash = urlParams.get('token_hash');
       const type = urlParams.get('type');
       
-      if (token && type === 'recovery') {
+      console.log('Recovery URL params:', { code, tokenHash, type, fullUrl: window.location.href });
+      
+      if (code) {
+        // Modern approach: exchange code for session
         try {
           setIsLoading(true);
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: 'recovery'
-          });
+          console.log('Attempting to exchange code for session...');
+          
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           
           if (error) {
-            console.error('Recovery token verification failed:', error);
+            console.error('Code exchange failed:', error);
             toast({
-              title: 'Invalid Link',
+              title: 'Invalid Reset Link',
               description: 'This password reset link has expired or is invalid. Please request a new one.',
               variant: 'destructive'
             });
           } else if (data.session) {
-            console.log('Recovery token verified, session established');
+            console.log('Code exchange successful, session established:', data.session.user.email);
             setIsPasswordUpdateMode(true);
             toast({
               title: 'Reset Link Verified',
@@ -208,7 +212,43 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             });
           }
         } catch (err) {
-          console.error('Recovery verification error:', err);
+          console.error('Code exchange error:', err);
+          toast({
+            title: 'Verification Error',
+            description: 'Failed to verify the reset link. Please try again.',
+            variant: 'destructive'
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      } else if (tokenHash && type === 'recovery') {
+        // Legacy approach: verify OTP token
+        try {
+          setIsLoading(true);
+          console.log('Attempting to verify OTP token...');
+          
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery'
+          });
+          
+          if (error) {
+            console.error('OTP verification failed:', error);
+            toast({
+              title: 'Invalid Reset Link',
+              description: 'This password reset link has expired or is invalid. Please request a new one.',
+              variant: 'destructive'
+            });
+          } else if (data.session) {
+            console.log('OTP verification successful, session established:', data.session.user.email);
+            setIsPasswordUpdateMode(true);
+            toast({
+              title: 'Reset Link Verified',
+              description: 'You can now set your new password.',
+            });
+          }
+        } catch (err) {
+          console.error('OTP verification error:', err);
           toast({
             title: 'Verification Error',
             description: 'Failed to verify the reset link. Please try again.',
@@ -218,6 +258,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
           setIsLoading(false);
         }
       } else if (window.location.search.includes('recovery=1')) {
+        console.log('Manual recovery mode triggered');
         setIsPasswordUpdateMode(true);
       }
     };
@@ -241,10 +282,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
     setIsLoading(true);
     try {
+      console.log('About to update password...');
+      
+      // Check current session before updating
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log('Current session status:', { 
+        hasSession: !!sessionData.session, 
+        hasUser: !!sessionData.session?.user,
+        userEmail: sessionData.session?.user?.email,
+        sessionError 
+      });
+      
+      if (!sessionData.session) {
+        throw new Error('No active session found. Please click the reset link again.');
+      }
+      
       const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      console.log('Password update result:', { data, error });
+      
       if (error) throw error;
 
+      console.log('Password updated successfully');
       toast({ title: 'Password Updated', description: 'Please sign in with your new password.' });
+      
       // End the recovery session and show the normal sign-in form
       await supabase.auth.signOut();
       setIsPasswordUpdateMode(false);
@@ -252,7 +312,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       setConfirmNewPassword('');
     } catch (error: any) {
       console.error('Update password error:', error);
-      toast({ title: 'Update Failed', description: error.message || 'Could not update password.', variant: 'destructive' });
+      toast({ 
+        title: 'Update Failed', 
+        description: error.message || 'Could not update password. Please try clicking the reset link again.', 
+        variant: 'destructive' 
+      });
     } finally {
       setIsLoading(false);
     }
