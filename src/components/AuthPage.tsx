@@ -147,7 +147,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: 'https://f8fe9401-8b63-4363-ae21-b380386f0616.lovableproject.com/'
+        redirectTo: 'https://f8fe9401-8b63-4363-ae21-b380386f0616.lovableproject.com/?recovery=1'
       });
 
       if (error) throw error;
@@ -180,7 +180,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     });
 
     const href = window.location.href;
-    if (href.includes('type=recovery')) {
+    if (href.includes('type=recovery') || href.includes('recovery=1')) {
       setIsPasswordUpdateMode(true);
     }
 
