@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -32,6 +32,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     email: '',
     password: ''
   });
+
+  // Password update flow state
+  const [isPasswordUpdateMode, setIsPasswordUpdateMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +171,53 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     }
   };
 
+  // Listen for Supabase password recovery and detect URL tokens
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordUpdateMode(true);
+      }
+    });
+
+    const href = window.location.href;
+    if (href.includes('type=recovery')) {
+      setIsPasswordUpdateMode(true);
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword.length < 6) {
+      toast({ title: 'Weak Password', description: 'Use at least 6 characters.', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: 'Password Mismatch', description: 'Passwords do not match.', variant: 'destructive' });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      toast({ title: 'Password Updated', description: 'Please sign in with your new password.' });
+      // End the recovery session and show the normal sign-in form
+      await supabase.auth.signOut();
+      setIsPasswordUpdateMode(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      toast({ title: 'Update Failed', description: error.message || 'Could not update password.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent p-4">
       <div className="fixed top-4 left-4 z-50">
@@ -189,7 +241,47 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             </TabsList>
             
             <TabsContent value="signin" className="space-y-4">
-              {!isResetMode ? (
+              {isPasswordUpdateMode ? (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-medium">Set New Password</h3>
+                    <p className="text-sm text-muted-foreground">Enter and confirm your new password</p>
+                  </div>
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        placeholder="Create a new password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        className="transition-smooth"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                      <Input
+                        id="confirm-new-password"
+                        type="password"
+                        placeholder="Confirm your new password"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        required
+                        className="transition-smooth"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full transition-spring hover:scale-105"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </form>
+                </>
+              ) : !isResetMode ? (
                 <>
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
