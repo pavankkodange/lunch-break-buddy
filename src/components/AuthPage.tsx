@@ -14,6 +14,8 @@ interface AuthPageProps {
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
   const { toast } = useToast();
   
   // Sign up form state
@@ -134,6 +136,36 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reset Email Sent!",
+        description: "Check your email for a password reset link.",
+      });
+      
+      setIsResetMode(false);
+      setResetEmail('');
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast({
+        title: "Reset Failed",
+        description: error.message || "Failed to send reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent p-4">
       <div className="fixed top-4 left-4 z-50">
@@ -157,41 +189,101 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             </TabsList>
             
             <TabsContent value="signin" className="space-y-4">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Company Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="your.name@company.com"
-                    value={signinData.email}
-                    onChange={(e) => setSigninData({...signinData, email: e.target.value})}
-                    required
-                    className="transition-smooth"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={signinData.password}
-                    onChange={(e) => setSigninData({...signinData, password: e.target.value})}
-                    required
-                    className="transition-smooth"
-                  />
-                </div>
-                
-                <Button 
-                  type="submit"
-                  className="w-full transition-spring hover:scale-105"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </form>
+              {!isResetMode ? (
+                <>
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Company Email</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="your.name@company.com"
+                        value={signinData.email}
+                        onChange={(e) => setSigninData({...signinData, email: e.target.value})}
+                        required
+                        className="transition-smooth"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Input
+                        id="signin-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={signinData.password}
+                        onChange={(e) => setSigninData({...signinData, password: e.target.value})}
+                        required
+                        className="transition-smooth"
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit"
+                      className="w-full transition-spring hover:scale-105"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Signing In..." : "Sign In"}
+                    </Button>
+                  </form>
+                  
+                  <div className="text-center">
+                    <Button 
+                      variant="link" 
+                      className="text-sm p-0 h-auto"
+                      onClick={() => setIsResetMode(true)}
+                      type="button"
+                    >
+                      Forgot your password?
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-medium">Reset Password</h3>
+                    <p className="text-sm text-muted-foreground">Enter your email to receive a reset link</p>
+                  </div>
+                  
+                  <form onSubmit={handlePasswordReset} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Company Email</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="your.name@company.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                        className="transition-smooth"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Button 
+                        type="submit"
+                        className="w-full transition-spring hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => {
+                          setIsResetMode(false);
+                          setResetEmail('');
+                        }}
+                        type="button"
+                        disabled={isLoading}
+                      >
+                        Back to Sign In
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              )}
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
