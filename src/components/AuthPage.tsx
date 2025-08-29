@@ -142,7 +142,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/auth`
+        redirectTo: 'https://f8fe9401-8b63-4363-ae21-b380386f0616.lovableproject.com/'
       });
 
       if (error) throw error;
