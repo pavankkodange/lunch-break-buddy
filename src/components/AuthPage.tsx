@@ -42,6 +42,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   // Geofencing state
   const [locationStatus, setLocationStatus] = useState<'checking' | 'allowed' | 'denied' | 'outside'>('checking');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showLocationDebug, setShowLocationDebug] = useState(false);
 
   // Office coordinates based on Plus Code C9MF+PW Hyderabad, Telangana
   // Approximate coordinates: 17.4166°N, 78.4749°E
@@ -770,6 +771,55 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             <div className="flex items-center justify-center space-x-1 text-xs">
               <MapPin className="h-3 w-3" />
               <span>Office location access required (Plus Code: C9MF+PW)</span>
+            </div>
+            
+            {/* Location Debug Panel */}
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLocationDebug(!showLocationDebug)}
+                className="text-xs h-6"
+              >
+                {showLocationDebug ? 'Hide' : 'Show'} Location Debug
+              </Button>
+              
+              {showLocationDebug && (
+                <div className="mt-2 p-3 bg-muted rounded-lg text-left">
+                  <h4 className="font-semibold text-sm mb-2">Location Debug Info</h4>
+                  <div className="space-y-1 text-xs">
+                    <p><strong>Status:</strong> {locationStatus}</p>
+                    {userLocation && (
+                      <>
+                        <p><strong>Your Location:</strong></p>
+                        <p className="ml-2">Lat: {userLocation.lat.toFixed(6)}</p>
+                        <p className="ml-2">Lng: {userLocation.lng.toFixed(6)}</p>
+                        <p><strong>Office Location:</strong></p>
+                        <p className="ml-2">Lat: {OFFICE_LOCATION.lat.toFixed(6)}</p>
+                        <p className="ml-2">Lng: {OFFICE_LOCATION.lng.toFixed(6)}</p>
+                        <p><strong>Distance:</strong> {Math.round(calculateDistance(
+                          userLocation.lat, 
+                          userLocation.lng, 
+                          OFFICE_LOCATION.lat, 
+                          OFFICE_LOCATION.lng
+                        ))}m</p>
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-xs text-muted-foreground">
+                            📍 Copy your current coordinates to update office location:
+                          </p>
+                          <code className="text-xs bg-background p-1 rounded block mt-1">
+                            lat: {userLocation.lat.toFixed(6)}, lng: {userLocation.lng.toFixed(6)}
+                          </code>
+                        </div>
+                      </>
+                    )}
+                    {!userLocation && locationStatus !== 'checking' && (
+                      <p className="text-orange-600">No location data available</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
