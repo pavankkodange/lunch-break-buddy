@@ -171,7 +171,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     }
   };
 
-  // Listen for Supabase password recovery and detect URL tokens
+  // Listen for Supabase password recovery and handle OTP verification
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -179,13 +179,53 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       }
     });
 
-    const href = window.location.href;
-    if (href.includes('type=recovery') || href.includes('recovery=1')) {
-      setIsPasswordUpdateMode(true);
-    }
+    const handleRecoveryToken = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const type = urlParams.get('type');
+      
+      if (token && type === 'recovery') {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery'
+          });
+          
+          if (error) {
+            console.error('Recovery token verification failed:', error);
+            toast({
+              title: 'Invalid Link',
+              description: 'This password reset link has expired or is invalid. Please request a new one.',
+              variant: 'destructive'
+            });
+          } else if (data.session) {
+            console.log('Recovery token verified, session established');
+            setIsPasswordUpdateMode(true);
+            toast({
+              title: 'Reset Link Verified',
+              description: 'You can now set your new password.',
+            });
+          }
+        } catch (err) {
+          console.error('Recovery verification error:', err);
+          toast({
+            title: 'Verification Error',
+            description: 'Failed to verify the reset link. Please try again.',
+            variant: 'destructive'
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      } else if (window.location.search.includes('recovery=1')) {
+        setIsPasswordUpdateMode(true);
+      }
+    };
+
+    handleRecoveryToken();
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
