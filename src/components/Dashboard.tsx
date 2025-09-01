@@ -341,13 +341,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ActionCard
-            title="Employee Portal"
-            description="View status and scan for meals"
-            icon={User}
-            onClick={() => onNavigate('employee')}
-            disabled={!isAutorabitEmployee}
-          />
+          {isAutorabitEmployee && (
+            <ActionCard
+              title="Employee Portal"
+              description="View status and scan for meals"
+              icon={User}
+              onClick={() => onNavigate('employee')}
+            />
+          )}
           <ActionCard
             title="Reports & Invoices"
             description={isAutorabitEmployee ? "Monthly coupon reports" : "Generate invoices (daily/weekly/monthly)"}
