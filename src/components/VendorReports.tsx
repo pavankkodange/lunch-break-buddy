@@ -17,7 +17,8 @@ import {
   Users, 
   DollarSign,
   Building2,
-  ArrowLeft
+  ArrowLeft,
+  LogOut
 } from 'lucide-react';
 
 interface CompanySettings {
@@ -72,7 +73,7 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     coupon_value: 160
   });
   
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
 
   // Generate available years (current year and previous year)
@@ -513,6 +514,23 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     };
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast({
+        title: "Logout Failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const stats = getReportStats();
 
   return (
@@ -522,6 +540,20 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
+      </div>
+
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        {user && (
+          <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border">
+            <span className="text-sm text-muted-foreground">
+              {user.email}
+            </span>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-1" />
+              Logout
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">

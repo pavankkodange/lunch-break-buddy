@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useToast } from '@/hooks/use-toast';
 import { CompanySettings } from './CompanySettings';
 import { 
   TrendingUp, 
@@ -15,7 +16,8 @@ import {
   QrCode,
   User,
   BarChart3,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -48,12 +50,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   });
   const [loading, setLoading] = useState(true);
   const [showCompanySettings, setShowCompanySettings] = useState(false);
-  const { user, isAutorabitEmployee } = useAuth();
+  const { user, signOut, isAutorabitEmployee } = useAuth();
   const { adminRole, isAutorabitAdmin, hasHRAccess, loading: roleLoading } = useAdminRole();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchDashboardStats();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast({
+        title: "Logout Failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const fetchDashboardStats = async () => {
     setLoading(true);
@@ -286,6 +306,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
+      <div className="fixed top-4 right-4 z-50">
+        {user && (
+          <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border">
+            <span className="text-sm text-muted-foreground">
+              {user.email}
+            </span>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-1" />
+              Logout
+            </Button>
+          </div>
+        )}
+      </div>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <Card className="shadow-elevated">
