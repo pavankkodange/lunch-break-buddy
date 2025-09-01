@@ -27,7 +27,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     confirmPassword: '',
     employeeNumber: '',
     fullName: '',
-    role: ''
+    role: '',
+    userType: 'employee' // 'employee' or 'vendor'
   });
 
   // Sign in form state
@@ -176,14 +177,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if role is selected
-    if (!signupData.role) {
-      toast({
-        title: "Role Required",
-        description: "Please select your role (HR or Employee).",
-        variant: "destructive",
-      });
-      return;
+    // Validate based on user type
+    if (signupData.userType === 'employee') {
+      // Check if role is selected for employees
+      if (!signupData.role) {
+        toast({
+          title: "Role Required",
+          description: "Please select your role (HR or Employee).",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check if employee number is provided for employees
+      if (!signupData.employeeNumber.trim()) {
+        toast({
+          title: "Employee Number Required",
+          description: "Please enter your employee number.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // For vendors, we don't require role or employee number
+      // We'll generate a vendor ID automatically
     }
     
     // Check location first for signup as well
@@ -215,13 +232,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     setIsLoading(true);
 
     try {
+      // Generate employee number for vendors if not provided
+      const employeeNumber = signupData.userType === 'vendor' 
+        ? `VENDOR_${Date.now()}` 
+        : signupData.employeeNumber;
+
+      // Determine department based on user type and role
+      let department = 'Employee';
+      if (signupData.userType === 'vendor') {
+        department = 'Vendor';
+      } else if (signupData.role === 'hr') {
+        department = 'HR';
+      }
+
       const signupOptions: any = {
         emailRedirectTo: `${window.location.origin}`,
         data: {
-          employee_number: signupData.employeeNumber,
+          employee_number: employeeNumber,
           full_name: signupData.fullName,
           company_email: signupData.email,
-          department: signupData.role === 'hr' ? 'HR' : 'Employee'
+          department: department
         }
       };
 
@@ -239,29 +269,33 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       if (error) throw error;
 
       if (data.user) {
-        // Assign role to the user
-        const roleValue = signupData.role === 'hr' ? 'hr_admin' : 'employee';
-        
-        try {
-          const { error: roleError } = await supabase
-            .from('admin_roles')
-            .insert({
-              user_id: data.user.id,
-              role: roleValue
-            });
+        // Assign role to the user only for employees
+        if (signupData.userType === 'employee' && signupData.role) {
+          const roleValue = signupData.role === 'hr' ? 'hr_admin' : 'employee';
           
-          if (roleError) {
-            console.error('Role assignment error:', roleError);
-            // Don't fail the signup for role assignment issues
+          try {
+            const { error: roleError } = await supabase
+              .from('admin_roles')
+              .insert({
+                user_id: data.user.id,
+                role: roleValue
+              });
+            
+            if (roleError) {
+              console.error('Role assignment error:', roleError);
+              // Don't fail the signup for role assignment issues
+            }
+          } catch (roleAssignError) {
+            console.error('Role assignment failed:', roleAssignError);
           }
-        } catch (roleAssignError) {
-          console.error('Role assignment failed:', roleAssignError);
         }
         
         if (data.user.email_confirmed_at || !emailVerificationEnabled) {
+          const accountType = signupData.userType === 'vendor' ? 'Vendor' : 
+                            (signupData.role === 'hr' ? 'HR' : 'Employee');
           toast({
             title: "Account Created!",
-            description: `Your ${signupData.role === 'hr' ? 'HR' : 'Employee'} account has been created successfully.`,
+            description: `Your ${accountType} account has been created successfully.`,
           });
           onAuthSuccess();
         } else {
@@ -782,6 +816,35 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
             
             <TabsContent value="signup" className="space-y-4">
               <form onSubmit={handleSignUp} className="space-y-4">
+                {/* User Type Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="user-type">Account Type</Label>
+                  <Select 
+                    value={signupData.userType} 
+                    onValueChange={(value) => setSignupData({
+                      ...signupData, 
+                      userType: value,
+                      // Reset role and employee number when switching types
+                      role: value === 'vendor' ? '' : signupData.role,
+                      employeeNumber: value === 'vendor' ? '' : signupData.employeeNumber
+                    })}
+                  >
+                    <SelectTrigger id="user-type" className="transition-smooth">
+                      <SelectValue placeholder="Select account type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border shadow-lg z-50">
+                      <SelectItem value="employee">Employee (Internal)</SelectItem>
+                      <SelectItem value="vendor">Vendor (External)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {signupData.userType === 'employee' 
+                      ? 'Choose this if you work for the company' 
+                      : 'Choose this if you are an external vendor or partner'
+                    }
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
                   <Input
@@ -794,24 +857,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-empno">Employee Number</Label>
-                  <Input
-                    id="signup-empno"
-                    placeholder="Enter your employee number"
-                    value={signupData.employeeNumber}
-                    onChange={(e) => setSignupData({...signupData, employeeNumber: e.target.value})}
-                    required
-                    className="transition-smooth"
-                  />
-                </div>
+                {/* Employee Number - Only show for employees */}
+                {signupData.userType === 'employee' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-empno">Employee Number</Label>
+                    <Input
+                      id="signup-empno"
+                      placeholder="Enter your employee number"
+                      value={signupData.employeeNumber}
+                      onChange={(e) => setSignupData({...signupData, employeeNumber: e.target.value})}
+                      required
+                      className="transition-smooth"
+                    />
+                  </div>
+                )}
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Company Email</Label>
+                  <Label htmlFor="signup-email">
+                    {signupData.userType === 'employee' ? 'Company Email' : 'Business Email'}
+                  </Label>
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="your.name@company.com"
+                    placeholder={signupData.userType === 'employee' ? 'your.name@company.com' : 'your.name@business.com'}
                     value={signupData.email}
                     onChange={(e) => setSignupData({...signupData, email: e.target.value})}
                     required
@@ -819,18 +887,21 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-role">Role</Label>
-                  <Select value={signupData.role} onValueChange={(value) => setSignupData({...signupData, role: value})}>
-                    <SelectTrigger id="signup-role" className="transition-smooth">
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border border-border shadow-lg z-50">
-                      <SelectItem value="hr">HR (Admin Access)</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Role Selection - Only show for employees */}
+                {signupData.userType === 'employee' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-role">Role</Label>
+                    <Select value={signupData.role} onValueChange={(value) => setSignupData({...signupData, role: value})}>
+                      <SelectTrigger id="signup-role" className="transition-smooth">
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border shadow-lg z-50">
+                        <SelectItem value="hr">HR (Admin Access)</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
@@ -934,7 +1005,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                   className="w-full transition-spring hover:scale-105"
                   disabled={isLoading || locationStatus !== 'allowed'}
                 >
-                  {isLoading ? "Creating Account..." : "Create Account"}
+                  {isLoading ? "Creating Account..." : `Create ${signupData.userType === 'vendor' ? 'Vendor' : 'Employee'} Account`}
                 </Button>
               </form>
             </TabsContent>
