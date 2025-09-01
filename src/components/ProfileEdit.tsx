@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,20 +8,73 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
+interface Profile {
+  id: string;
+  user_id: string;
+  employee_number: string;
+  full_name: string;
+  company_email: string;
+  department: string | null;
+}
+
 interface ProfileEditProps {
   onBack: () => void;
 }
 
 export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
-  const { profile, user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [formData, setFormData] = useState({
-    employee_number: profile?.employee_number || '',
-    full_name: profile?.full_name || '',
-    company_email: profile?.company_email || user?.email || '',
-    department: profile?.department || ''
+    employee_number: '',
+    full_name: '',
+    company_email: user?.email || '',
+    department: ''
   });
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        employee_number: profile.employee_number || '',
+        full_name: profile.full_name || '',
+        company_email: profile.company_email || user?.email || '',
+        department: profile.department || ''
+      });
+    }
+  }, [profile, user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('create_or_get_profile', {
+        p_user_id: user.id,
+        p_employee_number: user.user_metadata?.employee_number || null,
+        p_full_name: user.user_metadata?.full_name || '',
+        p_company_email: user.user_metadata?.company_email || user.email || ''
+      });
+
+      if (error) {
+        console.error('Profile fetch error:', error);
+      } else if (data && data.length > 0) {
+        const { id, user_id, employee_number, full_name, company_email, department } = data[0];
+        setProfile({ id, user_id, employee_number, full_name, company_email, department });
+      }
+    } catch (error) {
+      console.error('Profile fetch failed:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const departments = [
     'HR', 'Engineering', 'Sales', 'Marketing', 'Finance', 
@@ -161,6 +214,41 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
       setLoading(false);
     }
   };
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+          </div>
+          <p className="mt-2">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+          </div>
+          <p className="text-lg font-semibold">Profile Setup Required</p>
+          <p className="text-muted-foreground">Unable to load your profile. Please try refreshing the page.</p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => window.location.reload()} variant="default">
+              Refresh Page
+            </Button>
+            <Button onClick={onBack} variant="outline">
+              ← Back to Home
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">

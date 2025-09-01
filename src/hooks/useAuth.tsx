@@ -3,22 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Profile {
-  id: string;
-  user_id: string;
-  employee_number: string;
-  full_name: string;
-  company_email: string;
-  department: string | null;
-}
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const isCreatingProfile = useRef(false);
-  const currentUserId = useRef<string | null>(null);
 
   const isAutorabitEmployee = (email: string) => {
     return email.includes('@autorabit.com');
@@ -38,18 +26,11 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Skip if already processing this user or if already creating profile
-          if (currentUserId.current === session.user.id && isCreatingProfile.current) {
-            console.log('Profile operation already in progress for this user, skipping');
-            return;
-          }
-          
           // Skip profile creation completely and just continue
           console.log('User authenticated, continuing without profile fetch');
           if (mounted) setLoading(false);
         } else {
           if (mounted) {
-            setProfile(null);
             setLoading(false);
           }
         }
@@ -93,7 +74,6 @@ export const useAuth = () => {
       }
       setUser(null);
       setSession(null);
-      setProfile(null);
     } catch (error) {
       console.error('Failed to sign out:', error);
     }
@@ -102,7 +82,6 @@ export const useAuth = () => {
   return {
     user,
     session,
-    profile,
     loading,
     signOut,
     isAuthenticated: !!user,
