@@ -227,8 +227,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     );
   }
 
-  // Check if user has HR access
-  if (!hasHRAccess) {
+  // Check if user has access (HR employees or vendors)
+  const isVendor = !isAutorabitEmployee;
+  if (!hasHRAccess && !isVendor) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent flex items-center justify-center">
         <div className="max-w-md mx-auto text-center space-y-6">
@@ -242,15 +243,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <CardContent className="space-y-4">
               <div className="text-center space-y-3">
                 <div className="text-6xl">🚫</div>
-                <p className="text-lg font-semibold">HR Access Required</p>
+                <p className="text-lg font-semibold">HR or Vendor Access Required</p>
                 <p className="text-muted-foreground">
-                  This dashboard is only accessible to HR administrators. Your current role is: 
+                  This dashboard is accessible to HR administrators and vendors only. Your current role is: 
                   <Badge variant="secondary" className="ml-2">
                     {adminRole || 'Employee'}
                   </Badge>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  If you believe you should have access, please contact your system administrator.
+                  Regular employees can access the Employee Portal. If you believe you should have dashboard access, please contact your system administrator.
                 </p>
               </div>
               
@@ -299,6 +300,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {hasHRAccess && (
                 <Badge variant="default">
                   HR Dashboard Access
+                </Badge>
+              )}
+              {isVendor && (
+                <Badge variant="secondary">
+                  Vendor Access
                 </Badge>
               )}
             </div>
