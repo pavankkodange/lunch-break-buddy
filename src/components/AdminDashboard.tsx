@@ -389,7 +389,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-warning">
-                      {todayRedemptions.length > 0 ? new Set(todayRedemptions.map(r => r.user_id)).size : 0}
+                      {todayRedemptions.length > 0 ? new Set(todayRedemptions.map(r => r.employee_number)).size : 0}
                     </div>
                     <p className="text-sm text-muted-foreground">Unique Employees</p>
                   </div>
@@ -406,8 +406,7 @@ export const AdminDashboard: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Time</TableHead>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>ID</TableHead>
+                        <TableHead>Employee Details</TableHead>
                         <TableHead>Department</TableHead>
                         <TableHead>Value</TableHead>
                       </TableRow>
@@ -418,22 +417,33 @@ export const AdminDashboard: React.FC = () => {
                           <TableCell className="font-mono text-sm">
                             {new Date(redemption.redemption_time).toLocaleTimeString('en-IN', { 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              second: '2-digit'
                             })}
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {redemption.profile?.full_name || 'Unknown'}
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {redemption.employee_number}
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium text-base">
+                                {redemption.profile?.full_name || 'Unknown Employee'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ID: <span className="font-mono font-semibold">{redemption.employee_number}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {redemption.profile?.company_email || 'No email'}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs">
                               {redemption.profile?.department || 'N/A'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-semibold text-success">
-                            ₹160
+                          <TableCell>
+                            <div className="text-center">
+                              <div className="font-semibold text-success text-base">₹160</div>
+                              <div className="text-xs text-muted-foreground">Meal Value</div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -482,6 +492,93 @@ export const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent All-Time Redemptions */}
+        <Card className="shadow-elevated">
+          <CardHeader>
+            <CardTitle>Recent Redemptions (All Time)</CardTitle>
+            <p className="text-muted-foreground">
+              Last 20 meal redemptions across all days
+            </p>
+          </CardHeader>
+          <CardContent>
+            {loadingRedemptions ? (
+              <div className="text-center p-4">
+                <p className="text-muted-foreground">Loading all redemptions...</p>
+              </div>
+            ) : redemptions.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="max-h-96 overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background">
+                      <TableRow>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Employee Details</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Value</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {redemptions.slice(0, 20).map((redemption) => (
+                        <TableRow key={redemption.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium text-sm">
+                                {new Date(redemption.redemption_date).toLocaleDateString('en-IN')}
+                              </div>
+                              <div className="font-mono text-xs text-muted-foreground">
+                                {new Date(redemption.redemption_time).toLocaleTimeString('en-IN', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {redemption.profile?.full_name || 'Unknown Employee'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ID: <span className="font-mono font-semibold">{redemption.employee_number}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {redemption.profile?.company_email || 'No email'}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {redemption.profile?.department || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold text-success">₹160</div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                {redemptions.length > 20 && (
+                  <div className="p-3 border-t bg-muted/30 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Showing last 20 redemptions of {redemptions.length} total
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center p-8 border rounded-lg bg-muted/50">
+                <p className="text-muted-foreground">No redemptions found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Redemptions will appear here once employees start using the scanner
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Weekly Overview */}
