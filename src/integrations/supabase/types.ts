@@ -50,6 +50,7 @@ export type Database = {
           created_at: string
           currency: string | null
           email: string | null
+          email_verification_enabled: boolean | null
           favicon_url: string | null
           gst_number: string | null
           id: string
@@ -66,6 +67,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           email?: string | null
+          email_verification_enabled?: boolean | null
           favicon_url?: string | null
           gst_number?: string | null
           id?: string
@@ -82,6 +84,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           email?: string | null
+          email_verification_enabled?: boolean | null
           favicon_url?: string | null
           gst_number?: string | null
           id?: string

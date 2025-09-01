@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { supabase } from '@/integrations/supabase/client';
 import { CouponDisplay } from './CouponDisplay';
 import { KioskScanner } from './KioskScanner';
 
@@ -18,12 +21,88 @@ export const AdminDashboard: React.FC = () => {
   const [weeklyStats, setWeeklyStats] = useState<DayStats[]>([]);
   const [monthlyTotal, setMonthlyTotal] = useState({ redeemed: 0, value: 0 });
   const [activeView, setActiveView] = useState<'dashboard' | 'employee' | 'kiosk'>('dashboard');
+  const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(false);
   const { toast } = useToast();
   const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading } = useAdminRole();
 
   useEffect(() => {
     generateStats();
+    fetchCompanySettings();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('email_verification_enabled')
+        .limit(1)
+        .single();
+      
+      if (!error && data) {
+        setEmailVerificationEnabled(data.email_verification_enabled ?? true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch company settings:', error);
+    }
+  };
+
+  const updateEmailVerificationSetting = async (enabled: boolean) => {
+    if (!isAutorabitAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only Autorabit administrators can modify settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoadingSettings(true);
+    try {
+      // First check if settings exist
+      const { data: existing, error: fetchError } = await supabase
+        .from('company_settings')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existing) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('company_settings')
+          .update({ email_verification_enabled: enabled })
+          .eq('id', existing.id);
+        
+        if (error) throw error;
+      } else {
+        // Create new settings record
+        const { error } = await supabase
+          .from('company_settings')
+          .insert({ email_verification_enabled: enabled });
+        
+        if (error) throw error;
+      }
+
+      setEmailVerificationEnabled(enabled);
+      toast({
+        title: "Settings Updated",
+        description: `Email verification has been ${enabled ? 'enabled' : 'disabled'}.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to update email verification setting:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update settings.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
 
   const generateStats = () => {
     const stats: DayStats[] = [];
@@ -306,11 +385,39 @@ export const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Billing & Reports */}
+        {/* System Settings */}
+        {isAutorabitAdmin && (
           <Card className="shadow-elevated">
             <CardHeader>
-              <CardTitle>Billing & Reports</CardTitle>
+              <CardTitle>System Settings</CardTitle>
+              <p className="text-muted-foreground">Configure application behavior</p>
             </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="space-y-1">
+                  <Label htmlFor="email-verification" className="text-sm font-medium">
+                    Email Verification
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {emailVerificationEnabled ? 'Users must verify their email after signup' : 'Users can login immediately after signup'}
+                  </p>
+                </div>
+                <Switch
+                  id="email-verification"
+                  checked={emailVerificationEnabled}
+                  onCheckedChange={updateEmailVerificationSetting}
+                  disabled={loadingSettings}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Billing & Reports */}
+        <Card className="shadow-elevated">
+          <CardHeader>
+            <CardTitle>Billing & Reports</CardTitle>
+          </CardHeader>
             <CardContent className="space-y-4">
               <div className="border rounded-lg p-4 bg-gradient-coupon">
                 <h3 className="font-semibold mb-2">Monthly Summary</h3>

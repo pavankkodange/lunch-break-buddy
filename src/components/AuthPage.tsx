@@ -43,6 +43,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const [locationStatus, setLocationStatus] = useState<'checking' | 'allowed' | 'denied' | 'outside'>('checking');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showLocationDebug, setShowLocationDebug] = useState(false);
+  const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
 
   // Office coordinates - Twitza Building, Hyderabad
   // Updated to actual office location: 17.433749°N, 78.375504°E
@@ -141,10 +142,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     });
   };
 
-  // Check location on component mount
+  // Check location and email verification setting on component mount
   useEffect(() => {
     checkLocationPermission();
+    fetchEmailVerificationSetting();
   }, []);
+
+  const fetchEmailVerificationSetting = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('email_verification_enabled')
+        .limit(1)
+        .single();
+      
+      if (!error && data) {
+        setEmailVerificationEnabled(data.email_verification_enabled ?? true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch email verification setting:', error);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,23 +196,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     setIsLoading(true);
 
     try {
+      const signupOptions: any = {
+        emailRedirectTo: `${window.location.origin}`,
+        data: {
+          employee_number: signupData.employeeNumber,
+          full_name: signupData.fullName,
+          company_email: signupData.email
+        }
+      };
+
+      // Skip email confirmation if disabled
+      if (!emailVerificationEnabled) {
+        signupOptions.emailRedirectTo = undefined;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}`,
-          data: {
-            employee_number: signupData.employeeNumber,
-            full_name: signupData.fullName,
-            company_email: signupData.email
-          }
-        }
+        options: signupOptions
       });
 
       if (error) throw error;
 
       if (data.user) {
-        if (data.user.email_confirmed_at) {
+        if (data.user.email_confirmed_at || !emailVerificationEnabled) {
           toast({
             title: "Account Created!",
             description: "Your account has been created successfully.",
