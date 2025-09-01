@@ -3,14 +3,13 @@ import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
 import { KioskAdminDashboard } from '@/components/KioskAdminDashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
-import { EmployeeScanner } from '@/components/EmployeeScanner';
 import { VendorQRGenerator } from '@/components/VendorQRGenerator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'scanner' | 'kiosk_admin' | 'vendor_qr' | 'profile';
+type AppMode = 'home' | 'employee' | 'kiosk_admin' | 'vendor_qr' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -88,7 +87,7 @@ const Index = () => {
               <p className="text-muted-foreground">Digital meal coupon system for employees</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
                   onClick={handleEmployeeAccess}
                   variant="default"
@@ -96,22 +95,9 @@ const Index = () => {
                   className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
                   disabled={!isAutorabitEmployee}
                 >
-                  <span className="text-2xl">👤</span>
-                  <span>View Status</span>
-                  {!isAutorabitEmployee && (
-                    <span className="text-xs opacity-70">Autorabit employees only</span>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={() => setMode('scanner')}
-                  variant="default"
-                  size="lg"
-                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
-                  disabled={!isAutorabitEmployee}
-                >
-                  <span className="text-2xl">📱</span>
-                  <span>Scan for Meal</span>
+                  <span className="text-2xl">🍽️</span>
+                  <span>Employee Portal</span>
+                  <span className="text-xs opacity-70">Status & Scan for Meals</span>
                   {!isAutorabitEmployee && (
                     <span className="text-xs opacity-70">Autorabit employees only</span>
                   )}
@@ -209,10 +195,6 @@ const Index = () => {
 
   if (mode === 'employee') {
     return <CouponDisplay onLogout={handleLogout} onBack={handleBackToHome} />;
-  }
-
-  if (mode === 'scanner') {
-    return <EmployeeScanner onBack={handleBackToHome} />;
   }
 
   if (mode === 'kiosk_admin') {

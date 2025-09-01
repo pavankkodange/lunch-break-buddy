@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import QRCode from 'react-qr-code';
+import { Scanner } from './ui/scanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
   id: string;
@@ -26,7 +27,9 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
   const { signOut, user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     checkWeekdayAndRedemption();
@@ -91,6 +94,92 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
     const dayOfWeek = today.getDay();
     const isWeekdayToday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
     setIsWeekday(isWeekdayToday);
+  };
+
+  const handleScan = async (qrData: string) => {
+    setIsScanning(false);
+    
+    if (!profile) {
+      toast({
+        title: "Error",
+        description: "Profile not loaded. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Decode vendor QR code
+      const vendorData = JSON.parse(atob(qrData));
+      const { vendorId, type } = vendorData;
+
+      // Validate it's a vendor QR code
+      if (type !== 'vendor_redemption' || vendorId !== 'autorabit-cafeteria') {
+        toast({
+          title: "Invalid QR Code",
+          description: "Please scan the correct vendor QR code for meal redemption.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if it's a weekday
+      if (!isWeekday) {
+        toast({
+          title: "Not Available",
+          description: "Meals are only available on weekdays (Monday to Friday).",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if already redeemed today
+      if (todayRedeemed) {
+        toast({
+          title: "Already Redeemed",
+          description: "You have already taken your meal for today.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Record the redemption
+      const today = new Date().toISOString().split('T')[0];
+      const { error: redemptionError } = await supabase
+        .from('meal_redemptions')
+        .insert({
+          user_id: profile.user_id,
+          employee_number: profile.employee_number,
+          redemption_date: today
+        });
+
+      if (redemptionError) {
+        console.error('Failed to record redemption:', redemptionError);
+        toast({
+          title: "Error",
+          description: "Failed to record your meal redemption. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update local state and refresh data
+      setTodayRedeemed(true);
+      fetchRedemptions(); // Refresh the redemptions list
+
+      toast({
+        title: "Success! 🎉",
+        description: `Meal successfully redeemed for ₹160. Enjoy your meal, ${profile.full_name}!`,
+      });
+
+    } catch (error) {
+      console.error('Scan error:', error);
+      toast({
+        title: "Invalid QR Code",
+        description: "The scanned QR code is not valid. Please scan the vendor QR code.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Generate permanent employee QR code
@@ -190,14 +279,16 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
           </CardContent>
         </Card>
 
-        {/* Meal Redemption Status */}
+        {/* Meal Redemption Scanner */}
         <Card className="shadow-elevated">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2">
               <span>🍽️</span>
-              Meal Redemption
+              {todayRedeemed ? "Meal Status" : "Scan for Meal"}
             </CardTitle>
-            <p className="text-lg text-muted-foreground">Scan vendor QR code to get your meal</p>
+            <p className="text-sm text-muted-foreground">
+              {todayRedeemed ? "Already redeemed today" : "Scan vendor QR code at cafeteria"}
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {todayRedeemed ? (
@@ -208,22 +299,38 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
                   Come back tomorrow for your next meal
                 </p>
               </div>
-            ) : (
-              <div className="bg-white p-6 rounded-lg border-2 border-primary shadow-coupon text-center">
-                <div className="text-6xl mb-4">📱</div>
-                <div className="space-y-3">
-                  <p className="text-lg font-semibold text-primary">
-                    {isWeekday ? "Ready to Scan for ₹160 Meal" : "Available on Weekdays Only"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Go to cafeteria counter and scan the vendor QR code
-                  </p>
-                  <div className="pt-2">
-                    <p className="text-sm font-medium">{profile.full_name}</p>
-                    <p className="text-xs text-muted-foreground">ID: {profile.employee_number}</p>
-                  </div>
+            ) : !isWeekday ? (
+              <div className="bg-muted p-6 rounded-lg text-center">
+                <div className="text-4xl mb-2">📅</div>
+                <p className="font-medium text-lg">Meals Not Available</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Meals are only available on weekdays
+                </p>
+              </div>
+            ) : !isScanning ? (
+              <div className="text-center space-y-4">
+                <div className="text-6xl">📷</div>
+                <p className="text-sm text-muted-foreground">
+                  Go to cafeteria counter and scan the vendor QR code
+                </p>
+                <Button 
+                  onClick={() => setIsScanning(true)}
+                  size="lg"
+                  className="w-full transition-spring hover:scale-105"
+                >
+                  Start Scanning for ₹160 Meal
+                </Button>
+                <div className="pt-2 text-center">
+                  <p className="text-sm font-medium">{profile.full_name}</p>
+                  <p className="text-xs text-muted-foreground">ID: {profile.employee_number}</p>
                 </div>
               </div>
+            ) : (
+              <Scanner
+                onScan={handleScan}
+                onClose={() => setIsScanning(false)}
+                isActive={isScanning}
+              />
             )}
           </CardContent>
         </Card>
