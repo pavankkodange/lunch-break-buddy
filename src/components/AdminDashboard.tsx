@@ -7,8 +7,6 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
-import { CouponDisplay } from './CouponDisplay';
-import { KioskScanner } from './KioskScanner';
 
 interface DayStats {
   date: string;
@@ -20,7 +18,6 @@ interface DayStats {
 export const AdminDashboard: React.FC = () => {
   const [weeklyStats, setWeeklyStats] = useState<DayStats[]>([]);
   const [monthlyTotal, setMonthlyTotal] = useState({ redeemed: 0, value: 0 });
-  const [activeView, setActiveView] = useState<'dashboard' | 'employee' | 'kiosk'>('dashboard');
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const { toast } = useToast();
@@ -220,32 +217,6 @@ export const AdminDashboard: React.FC = () => {
 
   const todayStats = getTodayStats();
 
-  if (activeView === 'employee') {
-    return (
-      <div>
-        <div className="fixed top-4 left-4 z-50">
-          <Button onClick={() => setActiveView('dashboard')} variant="outline">
-            ← Back to Admin Dashboard
-          </Button>
-        </div>
-        <CouponDisplay onLogout={() => setActiveView('dashboard')} onBack={() => setActiveView('dashboard')} />
-      </div>
-    );
-  }
-
-  if (activeView === 'kiosk') {
-    return (
-      <div>
-        <div className="fixed top-4 left-4 z-50">
-          <Button onClick={() => setActiveView('dashboard')} variant="outline">
-            ← Back to Admin Dashboard
-          </Button>
-        </div>
-        <KioskScanner />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -268,43 +239,40 @@ export const AdminDashboard: React.FC = () => {
           </CardHeader>
         </Card>
 
-        {/* Admin Quick Access */}
+        {/* Daily Coupon Claims */}
         <Card className="shadow-elevated">
           <CardHeader>
-            <CardTitle>Admin Access</CardTitle>
+            <CardTitle>Daily Coupon Claims</CardTitle>
             <p className="text-muted-foreground">
-              {isAutorabitAdmin ? "Access all application features" : "View-only access to all features"}
+              Track which employees claimed and redeemed coupons today
             </p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button
-                onClick={() => setActiveView('employee')}
-                variant="default"
-                size="lg"
-                className="h-20 flex flex-col gap-2 transition-spring hover:scale-105"
-              >
-                <span className="text-2xl">👤</span>
-                <span>Employee Portal</span>
-              </Button>
+            <div className="space-y-4">
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Today's Activity</h3>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">{todayStats.claimed}</div>
+                    <p className="text-sm text-muted-foreground">Claimed</p>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-success">{todayStats.redeemed}</div>
+                    <p className="text-sm text-muted-foreground">Redeemed</p>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-warning">₹{todayStats.value}</div>
+                    <p className="text-sm text-muted-foreground">Total Value</p>
+                  </div>
+                </div>
+              </div>
               
-              <Button
-                onClick={() => setActiveView('kiosk')}
-                variant="secondary"
-                size="lg"
-                className="h-20 flex flex-col gap-2 transition-spring hover:scale-105"
-              >
-                <span className="text-2xl">📱</span>
-                <span>Kiosk Scanner</span>
-              </Button>
-            </div>
-            {!isAutorabitAdmin && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground text-center">
-                  ⚠️ You have view-only access. Some features may be restricted.
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Detailed employee tracking will be available in upcoming updates
                 </p>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
