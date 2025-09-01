@@ -54,7 +54,7 @@ const Index = () => {
     return () => clearTimeout(timeout);
   }, [loading]);
 
-  if (loading) {
+  if (loading && !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
