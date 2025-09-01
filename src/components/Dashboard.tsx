@@ -12,7 +12,6 @@ import {
   DollarSign, 
   Activity,
   QrCode,
-  Store,
   User,
   BarChart3
 } from 'lucide-react';
@@ -264,10 +263,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   Go to Employee Portal
                 </Button>
                 <Button 
-                  onClick={() => onNavigate('kiosk_admin')}
+                  onClick={() => onNavigate('reports')}
                   variant="outline"
                 >
-                  Access Kiosk & Admin
+                  View Reports
                 </Button>
               </div>
             </CardContent>
@@ -344,10 +343,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             disabled={!isAutorabitEmployee}
           />
           <ActionCard
-            title="Kiosk & Admin"
-            description="Scan QR codes and view data"
-            icon={Store}
-            onClick={() => onNavigate('kiosk_admin')}
+            title="Reports"
+            description={isAutorabitEmployee ? "Monthly coupon reports" : "Daily vendor reports"}
+            icon={BarChart3}
+            onClick={() => onNavigate('reports')}
             variant="secondary"
           />
           <ActionCard
@@ -447,10 +446,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 <div className="text-center">
                   <Button 
-                    onClick={() => onNavigate('kiosk_admin')} 
+                    onClick={() => onNavigate('reports')} 
                     variant="outline"
                   >
-                    View Full Admin Dashboard for More Details
+                    View Detailed Reports
                   </Button>
                 </div>
               </div>

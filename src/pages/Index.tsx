@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
-import { KioskAdminDashboard } from '@/components/KioskAdminDashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { VendorQRGenerator } from '@/components/VendorQRGenerator';
+import { Reports } from '@/components/Reports';
 import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'kiosk_admin' | 'vendor_qr' | 'profile';
+type AppMode = 'home' | 'employee' | 'reports' | 'vendor_qr' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -88,17 +88,8 @@ const Index = () => {
     return <CouponDisplay onLogout={handleLogout} onBack={handleBackToHome} />;
   }
 
-  if (mode === 'kiosk_admin') {
-    return (
-      <div>
-        <div className="fixed top-4 left-4 z-50">
-          <Button onClick={() => setMode('home')} variant="outline">
-            ← Back to Home
-          </Button>
-        </div>
-        <KioskAdminDashboard />
-      </div>
-    );
+  if (mode === 'reports') {
+    return <Reports onBack={handleBackToHome} />;
   }
 
   if (mode === 'vendor_qr') {
