@@ -263,7 +263,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
         password: signinData.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.log('Sign in error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          emailVerificationEnabled
+        });
+        
+        // If email verification is disabled and error is "Email not confirmed", 
+        // provide helpful instructions
+        if (error.message === "Email not confirmed" && !emailVerificationEnabled) {
+          toast({
+            title: "Account Needs Activation",
+            description: "Your account exists but isn't activated. Please delete your account from Supabase dashboard and sign up again, or ask an admin to activate it.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Welcome Back!",
@@ -276,9 +295,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       let errorMessage = error.message || "Failed to sign in.";
       
       if (error.message === "Invalid login credentials") {
-        errorMessage = "Invalid email or password. Please check your credentials and ensure your email is verified.";
+        errorMessage = "Invalid email or password. Please check your credentials.";
       } else if (error.message === "Email not confirmed") {
-        errorMessage = "Please check your email and click the verification link before signing in.";
+        if (!emailVerificationEnabled) {
+          errorMessage = "Account needs verification. Please delete your account from Supabase dashboard and sign up again, or contact admin to enable your account.";
+        } else {
+          errorMessage = "Please check your email and click the verification link before signing in.";
+        }
       }
       
       toast({
