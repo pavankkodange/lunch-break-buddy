@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -36,20 +37,90 @@ export const AdminDashboard: React.FC = () => {
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [redemptions, setRedemptions] = useState<RedemptionRecord[]>([]);
+  const [filteredRedemptions, setFilteredRedemptions] = useState<RedemptionRecord[]>([]);
   const [todayRedemptions, setTodayRedemptions] = useState<RedemptionRecord[]>([]);
   const [loadingRedemptions, setLoadingRedemptions] = useState(true);
+  
+  // Filter states
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
+  
   const { toast } = useToast();
   const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading, refreshRole } = useAdminRole();
+
+  // Generate available years (current year and previous year for 6-month retention)
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear.toString(), (currentYear - 1).toString()];
+  
+  // Generate available months
+  const availableMonths = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
 
   useEffect(() => {
     fetchRedemptions();
     fetchCompanySettings();
-  }, []);
+  }, [selectedYear, selectedMonth]);
+
+  // Filter redemptions whenever filters or raw data changes
+  useEffect(() => {
+    applyFilters();
+  }, [redemptions, selectedYear, selectedMonth]);
+
+  const applyFilters = () => {
+    if (!redemptions.length) {
+      setFilteredRedemptions([]);
+      setTodayRedemptions([]);
+      return;
+    }
+
+    // Filter redemptions by selected year and month
+    const filtered = redemptions.filter(r => {
+      const redemptionDate = new Date(r.redemption_date);
+      const redemptionYear = redemptionDate.getFullYear().toString();
+      const redemptionMonth = (redemptionDate.getMonth() + 1).toString();
+      
+      return redemptionYear === selectedYear && redemptionMonth === selectedMonth;
+    });
+
+    setFilteredRedemptions(filtered);
+
+    // Filter today's redemptions from the filtered set
+    const today = new Date().toISOString().split('T')[0];
+    const todaysFiltered = filtered.filter(r => r.redemption_date === today);
+    setTodayRedemptions(todaysFiltered);
+
+    // Generate stats from filtered data
+    generateStatsFromData(filtered);
+  };
+
+  const getDateRangeForFilter = () => {
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth);
+    
+    const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    
+    return { startDate, endDate };
+  };
 
   const fetchRedemptions = async () => {
     setLoadingRedemptions(true);
     try {
-      // Fetch all redemptions and join with profiles using user_id
+      const { startDate, endDate } = getDateRangeForFilter();
+      
+      // Fetch redemptions for the selected month with profile data
       const { data: redemptionsData, error } = await supabase
         .from('meal_redemptions')
         .select(`
@@ -60,6 +131,8 @@ export const AdminDashboard: React.FC = () => {
             company_email
           )
         `)
+        .gte('redemption_date', startDate)
+        .lte('redemption_date', endDate)
         .order('redemption_time', { ascending: false });
 
       if (error) {
@@ -68,16 +141,14 @@ export const AdminDashboard: React.FC = () => {
         const { data: simpleData, error: simpleError } = await supabase
           .from('meal_redemptions')
           .select('*')
+          .gte('redemption_date', startDate)
+          .lte('redemption_date', endDate)
           .order('redemption_time', { ascending: false });
           
         if (simpleError) {
           console.error('Error fetching simple redemptions:', simpleError);
         } else if (simpleData) {
           setRedemptions(simpleData);
-          setTodayRedemptions(simpleData.filter(r => 
-            r.redemption_date === new Date().toISOString().split('T')[0]
-          ));
-          generateStatsFromData(simpleData);
         }
       } else if (redemptionsData) {
         const formattedRedemptions = redemptionsData.map(item => ({
@@ -86,16 +157,6 @@ export const AdminDashboard: React.FC = () => {
         }));
         
         setRedemptions(formattedRedemptions);
-        
-        // Filter today's redemptions
-        const today = new Date().toISOString().split('T')[0];
-        const todaysRedemptions = formattedRedemptions.filter(r => 
-          r.redemption_date === today
-        );
-        setTodayRedemptions(todaysRedemptions);
-        
-        // Generate stats from real data
-        generateStatsFromData(formattedRedemptions);
       }
     } catch (error) {
       console.error('Failed to fetch redemptions:', error);
@@ -108,10 +169,19 @@ export const AdminDashboard: React.FC = () => {
     const stats: DayStats[] = [];
     const today = new Date();
     
-    // Generate stats for the last 7 days
+    // Generate stats for the last 7 days of the selected month
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const currentDay = year === today.getFullYear() && month === (today.getMonth() + 1) 
+      ? today.getDate() 
+      : daysInMonth;
+    
     for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
+      const targetDay = currentDay - i;
+      if (targetDay <= 0) continue;
+      
+      const date = new Date(year, month - 1, targetDay);
       const dateStr = date.toISOString().split('T')[0];
       
       const dayRedemptions = redemptionsData.filter(r => r.redemption_date === dateStr);
@@ -119,7 +189,7 @@ export const AdminDashboard: React.FC = () => {
       
       stats.push({
         date: dateStr,
-        claimed: redeemed, // For now, claimed = redeemed since we only track actual redemptions
+        claimed: redeemed,
         redeemed,
         value: redeemed * 160
       });
@@ -127,13 +197,11 @@ export const AdminDashboard: React.FC = () => {
     
     setWeeklyStats(stats);
     
-    // Calculate monthly total
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
+    // Calculate monthly total for selected month
     const monthlyRedemptions = redemptionsData.filter(r => {
       const redemptionDate = new Date(r.redemption_date);
-      return redemptionDate.getMonth() === currentMonth && 
-             redemptionDate.getFullYear() === currentYear;
+      return redemptionDate.getMonth() === (month - 1) && 
+             redemptionDate.getFullYear() === year;
     });
     
     setMonthlyTotal({
@@ -215,87 +283,27 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const generateStats = () => {
-    const stats: DayStats[] = [];
-    const today = new Date();
-    
-    // Generate stats for the last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      // Count coupons for this date
-      const claimed = countCouponsForDate(dateStr, 'claimed');
-      const redeemed = countCouponsForDate(dateStr, 'redeemed');
-      
-      stats.push({
-        date: dateStr,
-        claimed,
-        redeemed,
-        value: redeemed * 160
-      });
-    }
-    
-    setWeeklyStats(stats);
-    
-    // Calculate monthly total
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    let monthlyRedeemed = 0;
-    
-    for (let day = 1; day <= today.getDate(); day++) {
-      const checkDate = new Date(currentYear, currentMonth, day);
-      const dateStr = checkDate.toISOString().split('T')[0];
-      monthlyRedeemed += countCouponsForDate(dateStr, 'redeemed');
-    }
-    
-    setMonthlyTotal({
-      redeemed: monthlyRedeemed,
-      value: monthlyRedeemed * 160
-    });
-  };
-
-  const countCouponsForDate = (date: string, type: 'claimed' | 'redeemed'): number => {
-    const allKeys = Object.keys(localStorage);
-    
-    if (type === 'claimed') {
-      return allKeys.filter(key => 
-        key.startsWith('coupon_') && key.includes(date)
-      ).length;
-    } else {
-      return allKeys.filter(key => 
-        key.startsWith('used_') && key.includes(date)
-      ).length;
-    }
-  };
-
   const exportMonthlyReport = () => {
     const report = generateMonthlyReport();
-    downloadCSV(report, `food-coupon-report-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}.csv`);
+    const monthName = availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth;
+    downloadCSV(report, `food-coupon-report-${selectedYear}-${monthName.toLowerCase()}.csv`);
     
     toast({
       title: "Report Exported",
-      description: "Monthly billing report with employee details has been downloaded.",
+      description: `${monthName} ${selectedYear} report with employee details has been downloaded.`,
     });
   };
 
   const generateMonthlyReport = () => {
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth);
+    const monthName = availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth;
     
-    // Get current month's redemptions
-    const monthlyRedemptions = redemptions.filter(r => {
-      const redemptionDate = new Date(r.redemption_date);
-      return redemptionDate.getMonth() === currentMonth && 
-             redemptionDate.getFullYear() === currentYear;
-    });
-    
-    let csvContent = "Date,Day,Employee Number,Employee Name,Department,Company Email,Redemption Time,Value (₹)\n";
+    let csvContent = `Employee Food Coupon Report - ${monthName} ${selectedYear}\n`;
+    csvContent += "Date,Day,Employee Number,Employee Name,Department,Company Email,Redemption Time,Value (₹)\n";
     let totalValue = 0;
     
-    monthlyRedemptions.forEach(redemption => {
+    filteredRedemptions.forEach(redemption => {
       const date = new Date(redemption.redemption_date);
       const dayName = date.toLocaleDateString('en-IN', { weekday: 'long' });
       const time = new Date(redemption.redemption_time).toLocaleTimeString('en-IN');
@@ -306,10 +314,13 @@ export const AdminDashboard: React.FC = () => {
     });
     
     csvContent += `\nSUMMARY\n`;
-    csvContent += `Total Redemptions:,${monthlyRedemptions.length}\n`;
+    csvContent += `Report Period:,${monthName} ${selectedYear}\n`;
+    csvContent += `Total Redemptions:,${filteredRedemptions.length}\n`;
     csvContent += `Total Value:,₹${totalValue}\n`;
-    csvContent += `Average per day:,${(monthlyRedemptions.length / Math.min(today.getDate(), 31)).toFixed(1)}\n`;
-    csvContent += `\nReport generated on:,${new Date().toISOString()}\n`;
+    csvContent += `Unique Employees:,${new Set(filteredRedemptions.map(r => r.employee_number)).size}\n`;
+    csvContent += `Average per day:,${(filteredRedemptions.length / new Date(year, month, 0).getDate()).toFixed(1)}\n`;
+    csvContent += `\nGenerated on:,${new Date().toISOString()}\n`;
+    csvContent += `Data Retention:,6 months rolling basis\n`;
     
     return csvContent;
   };
@@ -366,12 +377,70 @@ export const AdminDashboard: React.FC = () => {
           </CardHeader>
         </Card>
 
-        {/* Daily Coupon Claims */}
+        {/* Date Filters */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle>Data Filter (6-Month Retention)</CardTitle>
+            <p className="text-muted-foreground">
+              Filter redemptions by year and month. Data is retained for 6 months on a rolling basis.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="year-select">Year</Label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger id="year-select">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="month-select">Month</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger id="month-select">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonths.map(month => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium">
+                Currently viewing: {availableMonths.find(m => m.value === selectedMonth)?.label} {selectedYear}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {filteredRedemptions.length} redemptions found for this period
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Today's Redemptions */}
         <Card className="shadow-elevated">
           <CardHeader>
             <CardTitle>Today's Redemptions</CardTitle>
             <p className="text-muted-foreground">
               Track which employees redeemed coupons today ({new Date().toLocaleDateString('en-IN')})
+              {selectedYear !== new Date().getFullYear().toString() || selectedMonth !== (new Date().getMonth() + 1).toString() ? 
+                ` - Filtered to ${availableMonths.find(m => m.value === selectedMonth)?.label} ${selectedYear}` : 
+                ''
+              }
             </p>
           </CardHeader>
           <CardContent>
@@ -493,20 +562,22 @@ export const AdminDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Recent All-Time Redemptions */}
+        {/* Recent Filtered Month Redemptions */}
         <Card className="shadow-elevated">
           <CardHeader>
-            <CardTitle>Recent Redemptions (All Time)</CardTitle>
+            <CardTitle>
+              {availableMonths.find(m => m.value === selectedMonth)?.label} {selectedYear} Redemptions
+            </CardTitle>
             <p className="text-muted-foreground">
-              Last 20 meal redemptions across all days
+              All redemptions for the selected month ({filteredRedemptions.length} total)
             </p>
           </CardHeader>
           <CardContent>
             {loadingRedemptions ? (
               <div className="text-center p-4">
-                <p className="text-muted-foreground">Loading all redemptions...</p>
+                <p className="text-muted-foreground">Loading redemptions...</p>
               </div>
-            ) : redemptions.length > 0 ? (
+            ) : filteredRedemptions.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-96 overflow-y-auto">
                   <Table>
@@ -519,7 +590,7 @@ export const AdminDashboard: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {redemptions.slice(0, 20).map((redemption) => (
+                      {filteredRedemptions.map((redemption) => (
                         <TableRow key={redemption.id}>
                           <TableCell>
                             <div className="space-y-1">
@@ -560,20 +631,14 @@ export const AdminDashboard: React.FC = () => {
                     </TableBody>
                   </Table>
                 </div>
-                
-                {redemptions.length > 20 && (
-                  <div className="p-3 border-t bg-muted/30 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      Showing last 20 redemptions of {redemptions.length} total
-                    </p>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="text-center p-8 border rounded-lg bg-muted/50">
-                <p className="text-muted-foreground">No redemptions found</p>
+                <p className="text-muted-foreground">
+                  No redemptions found for {availableMonths.find(m => m.value === selectedMonth)?.label} {selectedYear}
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Redemptions will appear here once employees start using the scanner
+                  Try selecting a different month or year
                 </p>
               </div>
             )}
@@ -694,17 +759,13 @@ export const AdminDashboard: React.FC = () => {
 
               <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Report Period: {new Date().toLocaleDateString('en-IN', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })} ({redemptions.filter(r => {
-                    const redemptionDate = new Date(r.redemption_date);
-                    return redemptionDate.getMonth() === new Date().getMonth() && 
-                           redemptionDate.getFullYear() === new Date().getFullYear();
-                  }).length} records)
+                  Report Period: {availableMonths.find(m => m.value === selectedMonth)?.label} {selectedYear} ({filteredRedemptions.length} records)
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Detailed CSV includes: Employee names, IDs, departments, and redemption times
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Data Retention: 6 months rolling basis • Current filter: {availableMonths.find(m => m.value === selectedMonth)?.label} {selectedYear}
                 </p>
               </div>
             </CardContent>
