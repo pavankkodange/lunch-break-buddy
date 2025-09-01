@@ -42,32 +42,62 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
 
   useEffect(() => {
     if (profile) {
+      console.log('Setting form data from profile:', profile);
       setFormData({
         employee_number: profile.employee_number || '',
         full_name: profile.full_name || '',
         company_email: profile.company_email || user?.email || '',
         department: profile.department || ''
       });
+    } else if (user && !profileLoading) {
+      // If no profile but user exists and we're not loading, pre-fill with user data
+      console.log('No profile found, pre-filling with user data');
+      setFormData({
+        employee_number: user.user_metadata?.employee_number || '',
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        company_email: user.email || '',
+        department: ''
+      });
     }
-  }, [profile, user]);
+  }, [profile, user, profileLoading]);
 
   const fetchProfile = async () => {
     if (!user) return;
     
     setProfileLoading(true);
     try {
-      const { data, error } = await supabase.rpc('create_or_get_profile', {
-        p_user_id: user.id,
-        p_employee_number: user.user_metadata?.employee_number || null,
-        p_full_name: user.user_metadata?.full_name || '',
-        p_company_email: user.user_metadata?.company_email || user.email || ''
-      });
+      // First try to get existing profile
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Profile fetch error:', error);
-      } else if (data && data.length > 0) {
-        const { id, user_id, employee_number, full_name, company_email, department } = data[0];
-        setProfile({ id, user_id, employee_number, full_name, company_email, department });
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Profile fetch error:', fetchError);
+      }
+
+      if (existingProfile) {
+        // Profile exists, use it
+        console.log('Found existing profile:', existingProfile);
+        setProfile(existingProfile);
+      } else {
+        // No profile found, try to create one using RPC
+        console.log('No profile found, creating new profile via RPC');
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
+          p_user_id: user.id,
+          p_employee_number: user.user_metadata?.employee_number || null,
+          p_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          p_company_email: user.user_metadata?.company_email || user.email || ''
+        });
+
+        if (rpcError) {
+          console.error('Profile RPC error:', rpcError);
+        } else if (rpcData && rpcData.length > 0) {
+          console.log('Created profile via RPC:', rpcData[0]);
+          const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
+          setProfile({ id, user_id, employee_number, full_name, company_email, department });
+        }
       }
     } catch (error) {
       console.error('Profile fetch failed:', error);
@@ -88,14 +118,111 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
     }));
   };
 
-  const handleSaveProfile = async () => {
-    if (!profile?.user_id) {
+  const handleCreateProfile = async () => {
+    if (!user) {
       toast({
         title: "Error",
-        description: "Unable to update profile. Please try logging out and back in.",
+        description: "User not found. Please try logging out and back in.",
         variant: "destructive"
       });
       return;
+    }
+
+    if (!formData.employee_number.trim() || !formData.full_name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Employee number and full name are required.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log('Creating new profile for user:', user.id);
+
+      // Check if employee number is already taken
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('user_id, employee_number')
+        .eq('employee_number', formData.employee_number.trim())
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking employee number:', checkError);
+        toast({
+          title: "Validation Error",
+          description: `Failed to validate employee number: ${checkError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (existingProfile) {
+        console.log('Employee number already taken by user:', existingProfile.user_id);
+        toast({
+          title: "Employee Number Taken",
+          description: `Employee number "${formData.employee_number}" is already in use. Please choose a different one.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create the profile
+      const { error: insertError, data: insertData } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: user.id,
+          employee_number: formData.employee_number.trim(),
+          full_name: formData.full_name.trim(),
+          company_email: formData.company_email.trim(),
+          department: formData.department || null
+        })
+        .select();
+
+      if (insertError) {
+        console.error('Error creating profile:', insertError);
+        toast({
+          title: "Creation Failed",
+          description: `Failed to create profile: ${insertError.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Profile created successfully:', insertData);
+      
+      if (insertData && insertData.length > 0) {
+        setProfile(insertData[0]);
+      }
+
+      toast({
+        title: "Profile Created",
+        description: "Your profile has been successfully created!",
+      });
+
+      // Small delay to allow user to see the success message
+      setTimeout(() => {
+        onBack();
+      }, 1500);
+
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      toast({
+        title: "Unexpected Error",
+        description: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile?.user_id) {
+      // If no profile exists, create one instead
+      return handleCreateProfile();
     }
 
     if (!formData.employee_number.trim() || !formData.full_name.trim()) {
@@ -228,23 +355,109 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ onBack }) => {
     );
   }
 
-  if (!profile) {
+  if (!profile && !profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto mb-4">
-            <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
-          </div>
-          <p className="text-lg font-semibold">Profile Setup Required</p>
-          <p className="text-muted-foreground">Unable to load your profile. Please try refreshing the page.</p>
-          <div className="flex gap-2 justify-center">
-            <Button onClick={() => window.location.reload()} variant="default">
-              Refresh Page
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex items-center gap-4 mb-6">
             <Button onClick={onBack} variant="outline">
-              ← Back to Home
+              ← Back
             </Button>
+            <h1 className="text-2xl font-bold">Create Profile</h1>
           </div>
+
+          <Card className="shadow-elevated">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">👤</span>
+                Setup Your Profile
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Let's set up your profile information. This will help identify you in the system.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="employee_number">Employee Number *</Label>
+                <Input
+                  id="employee_number"
+                  type="text"
+                  placeholder="e.g., EMP001"
+                  value={formData.employee_number}
+                  onChange={(e) => handleInputChange('employee_number', e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This number must be unique across the system
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.full_name}
+                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company_email">Company Email</Label>
+                <Input
+                  id="company_email"
+                  type="email"
+                  placeholder="your.email@company.com"
+                  value={formData.company_email}
+                  onChange={(e) => handleInputChange('company_email', e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use your official company email address
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Select
+                  value={formData.department}
+                  onValueChange={(value) => handleInputChange('department', value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button
+                  onClick={handleCreateProfile}
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  {loading ? 'Creating Profile...' : 'Create Profile'}
+                </Button>
+                <Button
+                  onClick={onBack}
+                  variant="outline"
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
