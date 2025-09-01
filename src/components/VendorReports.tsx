@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { 
   Receipt, 
   Download, 
@@ -356,7 +356,7 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     ];
 
     // Add table
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [tableColumns],
       body: tableData,
       startY: yPos + 20,
@@ -462,20 +462,29 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
   };
 
   const downloadInvoice = () => {
-    const doc = generatePDFInvoice();
-    const period = reportType === 'daily' 
-      ? selectedDate
-      : reportType === 'weekly'
-        ? `week-${selectedWeek}`
-        : `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
-    const filename = `vendor-invoice-${reportType}-${period}.pdf`;
-    
-    doc.save(filename);
-    
-    toast({
-      title: "Invoice Downloaded",
-      description: `${getInvoiceTitle()} has been downloaded as PDF successfully.`,
-    });
+    try {
+      const doc = generatePDFInvoice();
+      const period = reportType === 'daily' 
+        ? selectedDate
+        : reportType === 'weekly'
+          ? `week-${selectedWeek}`
+          : `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
+      const filename = `vendor-invoice-${reportType}-${period}.pdf`;
+      
+      doc.save(filename);
+      
+      toast({
+        title: "Invoice Downloaded",
+        description: `${getInvoiceTitle()} has been downloaded as PDF successfully.`,
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was an error generating the PDF invoice. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getReportStats = () => {
