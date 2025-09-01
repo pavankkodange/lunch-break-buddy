@@ -343,8 +343,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             disabled={!isAutorabitEmployee}
           />
           <ActionCard
-            title="Reports"
-            description={isAutorabitEmployee ? "Monthly coupon reports" : "Daily vendor reports"}
+            title="Reports & Invoices"
+            description={isAutorabitEmployee ? "Monthly coupon reports" : "Generate invoices (daily/weekly/monthly)"}
             icon={BarChart3}
             onClick={() => onNavigate('reports')}
             variant="secondary"
