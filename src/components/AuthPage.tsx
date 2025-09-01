@@ -44,9 +44,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showLocationDebug, setShowLocationDebug] = useState(false);
 
-  // Office coordinates based on Plus Code C9MF+PW Hyderabad, Telangana
-  // Approximate coordinates: 17.4166°N, 78.4749°E
-  const OFFICE_LOCATION = { lat: 17.4166, lng: 78.4749 };
+  // Office coordinates - Twitza Building, Hyderabad
+  // Updated to actual office location: 17.433749°N, 78.375504°E
+  const OFFICE_LOCATION = { lat: 17.433749, lng: 78.375504 };
   const OFFICE_RADIUS_METERS = 200; // Allow login within 200 meters of office
 
   // Calculate distance between two coordinates using Haversine formula
