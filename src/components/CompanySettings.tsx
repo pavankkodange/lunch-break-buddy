@@ -28,6 +28,7 @@ interface CompanySettingsData {
   email: string;
   contact_number: string;
   gst_number: string;
+  gst_percentage: number;
   logo_url: string;
   favicon_url: string;
   primary_color: string;
@@ -47,6 +48,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
     email: 'info@autorabit.com',
     contact_number: '+91-80-xxxx-xxxx',
     gst_number: '',
+    gst_percentage: 18.0,
     logo_url: '/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png',
     favicon_url: '',
     primary_color: '#3b82f6',
@@ -81,7 +83,8 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
         setSettings(prev => ({
           ...prev,
           ...data,
-          coupon_value: data.coupon_value || 160
+          coupon_value: data.coupon_value || 160,
+          gst_percentage: data.gst_percentage || 18.0
         }));
       }
     } catch (error) {
@@ -210,6 +213,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
         email: settings.email,
         contact_number: settings.contact_number,
         gst_number: settings.gst_number,
+        gst_percentage: settings.gst_percentage,
         logo_url: settings.logo_url,
         favicon_url: settings.favicon_url,
         primary_color: settings.primary_color,
@@ -331,6 +335,37 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
               </div>
             </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gst-percentage">GST Percentage (%)</Label>
+                <Input
+                  id="gst-percentage"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={settings.gst_percentage}
+                  onChange={(e) => handleInputChange('gst_percentage', parseFloat(e.target.value) || 0)}
+                  disabled={!isAutorabitAdmin}
+                  placeholder="18.0"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currency" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Currency
+                </Label>
+                <Input
+                  id="currency"
+                  value={settings.currency}
+                  onChange={(e) => handleInputChange('currency', e.target.value)}
+                  disabled={!isAutorabitAdmin}
+                  placeholder="₹"
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="company-address">Company Address</Label>
               <Textarea
@@ -425,7 +460,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="primary-color" className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
@@ -469,20 +504,6 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ onBack }) => {
                     className="flex-1"
                   />
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="currency" className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Currency
-                </Label>
-                <Input
-                  id="currency"
-                  value={settings.currency}
-                  onChange={(e) => handleInputChange('currency', e.target.value)}
-                  disabled={!isAutorabitAdmin}
-                  placeholder="₹"
-                />
               </div>
             </div>
           </CardContent>

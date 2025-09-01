@@ -53,6 +53,7 @@ export type Database = {
           email_verification_enabled: boolean | null
           favicon_url: string | null
           gst_number: string | null
+          gst_percentage: number | null
           id: string
           logo_url: string | null
           primary_color: string | null
@@ -70,6 +71,7 @@ export type Database = {
           email_verification_enabled?: boolean | null
           favicon_url?: string | null
           gst_number?: string | null
+          gst_percentage?: number | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           email_verification_enabled?: boolean | null
           favicon_url?: string | null
           gst_number?: string | null
+          gst_percentage?: number | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null

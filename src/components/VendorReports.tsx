@@ -26,6 +26,7 @@ interface CompanySettings {
   email: string;
   contact_number: string;
   gst_number: string;
+  gst_percentage: number;
   logo_url: string;
   primary_color: string;
   currency: string;
@@ -64,6 +65,7 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     email: 'info@autorabit.com',
     contact_number: '+91-80-xxxx-xxxx',
     gst_number: '',
+    gst_percentage: 18.0,
     logo_url: '/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png',
     primary_color: '#3b82f6',
     currency: '₹',
@@ -255,7 +257,8 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
         setCompanySettings(prev => ({
           ...prev,
           ...data,
-          coupon_value: data.coupon_value || 160
+          coupon_value: data.coupon_value || 160,
+          gst_percentage: data.gst_percentage || 18.0
         }));
       }
     } catch (error) {
@@ -378,7 +381,7 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     // Invoice totals
     const finalY = (doc as any).lastAutoTable.finalY + 20;
     const totalValue = redemptions.length * companySettings.coupon_value;
-    const taxRate = 0.18; // 18% GST
+    const taxRate = companySettings.gst_percentage / 100;
     const taxAmount = Math.round(totalValue * taxRate);
     const totalWithTax = totalValue + taxAmount;
     
@@ -390,31 +393,35 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     doc.setFontSize(10);
     
     const summaryY = finalY + 10;
-    doc.text(`Subtotal (${redemptions.length} meals × ${companySettings.currency}${companySettings.coupon_value}):`, 20, summaryY);
-    doc.text(`${companySettings.currency}${totalValue}`, 150, summaryY);
     
-    doc.text('GST (18%):', 20, summaryY + 7);
-    doc.text(`${companySettings.currency}${taxAmount}`, 150, summaryY + 7);
+    // Show GST details if GST number is provided
+    if (companySettings.gst_number) {
+      doc.text(`GST Number: ${companySettings.gst_number}`, 20, summaryY);
+      doc.text(`GST (${companySettings.gst_percentage}%): ${companySettings.currency}${taxAmount}`, 20, summaryY + 7);
+    }
     
     // Add line above total
     doc.setDrawColor(0, 0, 0);
-    doc.line(20, summaryY + 10, 180, summaryY + 10);
+    const lineY = companySettings.gst_number ? summaryY + 14 : summaryY + 7;
+    doc.line(20, lineY, 180, lineY);
     
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('TOTAL AMOUNT DUE:', 20, summaryY + 17);
-    doc.text(`${companySettings.currency}${totalWithTax}`, 150, summaryY + 17);
+    doc.setFontSize(14);
+    doc.text('TOTAL AMOUNT DUE:', 20, lineY + 10);
+    doc.text(`${companySettings.currency}${totalWithTax}`, 150, lineY + 10);
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Unique Employees Served: ${new Set(redemptions.map(r => r.employee_number)).size}`, 20, summaryY + 27);
+    const detailsY = companySettings.gst_number ? lineY + 20 : lineY + 20;
+    doc.text(`Meals Served: ${redemptions.length} × ${companySettings.currency}${companySettings.coupon_value} = ${companySettings.currency}${totalValue}`, 20, detailsY);
+    doc.text(`Unique Employees Served: ${new Set(redemptions.map(r => r.employee_number)).size}`, 20, detailsY + 7);
     
     // Payment terms
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PAYMENT TERMS:', 20, summaryY + 40);
+    doc.text('PAYMENT TERMS:', 20, detailsY + 20);
     doc.setFont('helvetica', 'normal');
-    doc.text('Net 30 Days from invoice date', 20, summaryY + 47);
+    doc.text('Net 30 Days from invoice date', 20, detailsY + 27);
 
     // Footer
     const pageHeight = doc.internal.pageSize.height;
@@ -493,7 +500,7 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     const uniqueEmployees = new Set(redemptions.map(r => r.employee_number)).size;
     const reportPeriod = getInvoicePeriod();
     
-    const taxAmount = Math.round(totalValue * 0.18);
+    const taxAmount = Math.round(totalValue * (companySettings.gst_percentage / 100));
     const totalWithTax = totalValue + taxAmount;
 
     return { 
@@ -782,16 +789,18 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
                       <CardContent>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span>Subtotal ({stats.totalRedemptions} meals × {companySettings.currency}{companySettings.coupon_value}):</span>
+                            <span>Service Amount ({stats.totalRedemptions} meals × {companySettings.currency}{companySettings.coupon_value}):</span>
                             <span className="font-semibold">{companySettings.currency}{stats.totalValue}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span>GST (18%):</span>
-                            <span className="font-semibold">{companySettings.currency}{stats.taxAmount}</span>
-                          </div>
+                          {companySettings.gst_number && (
+                            <div className="flex justify-between">
+                              <span>GST ({companySettings.gst_percentage}%) - {companySettings.gst_number}:</span>
+                              <span className="font-semibold">{companySettings.currency}{stats.taxAmount}</span>
+                            </div>
+                          )}
                           <div className="border-t pt-2">
                             <div className="flex justify-between text-lg font-bold">
-                              <span>Total Amount:</span>
+                              <span>Total Amount Due:</span>
                               <span className="text-primary">{companySettings.currency}{stats.totalWithTax}</span>
                             </div>
                           </div>
