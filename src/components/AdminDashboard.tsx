@@ -49,12 +49,12 @@ export const AdminDashboard: React.FC = () => {
   const fetchRedemptions = async () => {
     setLoadingRedemptions(true);
     try {
-      // Fetch all redemptions with profile data
+      // Fetch all redemptions and join with profiles using user_id
       const { data: redemptionsData, error } = await supabase
         .from('meal_redemptions')
         .select(`
           *,
-          profiles!inner(
+          profiles!fk_meal_redemptions_user_id(
             full_name,
             department,
             company_email
@@ -64,10 +64,25 @@ export const AdminDashboard: React.FC = () => {
 
       if (error) {
         console.error('Error fetching redemptions:', error);
+        // If foreign key join fails, try without profile data
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('meal_redemptions')
+          .select('*')
+          .order('redemption_time', { ascending: false });
+          
+        if (simpleError) {
+          console.error('Error fetching simple redemptions:', simpleError);
+        } else if (simpleData) {
+          setRedemptions(simpleData);
+          setTodayRedemptions(simpleData.filter(r => 
+            r.redemption_date === new Date().toISOString().split('T')[0]
+          ));
+          generateStatsFromData(simpleData);
+        }
       } else if (redemptionsData) {
         const formattedRedemptions = redemptionsData.map(item => ({
           ...item,
-          profile: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+          profile: item.profiles
         }));
         
         setRedemptions(formattedRedemptions);
