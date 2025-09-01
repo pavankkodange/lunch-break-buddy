@@ -50,33 +50,53 @@ export const useAuth = () => {
             currentUserId.current = session.user.id;
             console.log('Fetching profile for user:', session.user.id);
             
-            // Create or fetch profile via RPC to avoid duplicates
-            const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
-              p_user_id: session.user.id,
-              p_employee_number: session.user.user_metadata?.employee_number || null,
-              p_full_name: session.user.user_metadata?.full_name || '',
-              p_company_email: session.user.user_metadata?.company_email || session.user.email || ''
-            });
+            // Add timeout protection for RPC call
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            try {
+              const { data: rpcData, error: rpcError } = await supabase.rpc('create_or_get_profile', {
+                p_user_id: session.user.id,
+                p_employee_number: session.user.user_metadata?.employee_number || null,
+                p_full_name: session.user.user_metadata?.full_name || '',
+                p_company_email: session.user.user_metadata?.company_email || session.user.email || ''
+              });
 
-            if (!mounted) return;
+              clearTimeout(timeoutId);
 
-            if (rpcError) {
-              console.error('Profile RPC error:', rpcError);
-              setProfile(null);
-            } else if (rpcData && rpcData.length > 0) {
-              const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
-              console.log('Profile upserted/fetched via RPC:', rpcData[0]);
-              setProfile({ id, user_id, employee_number, full_name, company_email, department });
-            } else {
-              console.warn('Profile RPC returned no data');
-              setProfile(null);
+              if (!mounted) return;
+
+              if (rpcError) {
+                console.error('Profile RPC error:', rpcError);
+                // Continue anyway - user can still use the app
+                setProfile(null);
+              } else if (rpcData && rpcData.length > 0) {
+                const { id, user_id, employee_number, full_name, company_email, department } = rpcData[0];
+                console.log('Profile upserted/fetched via RPC:', rpcData[0]);
+                setProfile({ id, user_id, employee_number, full_name, company_email, department });
+              } else {
+                console.warn('Profile RPC returned no data, continuing without profile');
+                setProfile(null);
+              }
+            } catch (rpcErr) {
+              clearTimeout(timeoutId);
+              if (rpcErr.name === 'AbortError') {
+                console.warn('Profile fetch timed out, continuing without profile');
+              } else {
+                console.error('Profile RPC call failed:', rpcErr);
+              }
+              if (mounted) setProfile(null);
             }
           } catch (err) {
             console.error('Profile operation error:', err);
+            console.log('Continuing without profile data');
             if (mounted) setProfile(null);
           } finally {
             isCreatingProfile.current = false;
-            if (mounted) setLoading(false);
+            if (mounted) {
+              console.log('Setting loading to false');
+              setLoading(false);
+            }
           }
         } else {
           if (mounted) {
