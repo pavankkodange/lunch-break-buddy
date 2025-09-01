@@ -21,7 +21,7 @@ export const AdminDashboard: React.FC = () => {
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const { toast } = useToast();
-  const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading } = useAdminRole();
+  const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading, refreshRole } = useAdminRole();
 
   useEffect(() => {
     generateStats();
@@ -235,6 +235,16 @@ export const AdminDashboard: React.FC = () => {
               <Badge variant={isAutorabitAdmin ? "default" : "secondary"}>
                 {isAutorabitAdmin ? "Autorabit Admin" : "View Only"}
               </Badge>
+              {!isAutorabitAdmin && (
+                <Button 
+                  onClick={refreshRole} 
+                  variant="ghost" 
+                  size="sm"
+                  className="ml-2"
+                >
+                  🔄 Refresh Access
+                </Button>
+              )}
             </div>
           </CardHeader>
         </Card>
