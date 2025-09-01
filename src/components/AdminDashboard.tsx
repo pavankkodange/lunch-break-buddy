@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,18 +16,116 @@ interface DayStats {
   value: number;
 }
 
+interface RedemptionRecord {
+  id: string;
+  user_id: string;
+  employee_number: string;
+  redemption_date: string;
+  redemption_time: string;
+  created_at: string;
+  profile?: {
+    full_name: string;
+    department: string;
+    company_email: string;
+  };
+}
+
 export const AdminDashboard: React.FC = () => {
   const [weeklyStats, setWeeklyStats] = useState<DayStats[]>([]);
   const [monthlyTotal, setMonthlyTotal] = useState({ redeemed: 0, value: 0 });
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(false);
+  const [redemptions, setRedemptions] = useState<RedemptionRecord[]>([]);
+  const [todayRedemptions, setTodayRedemptions] = useState<RedemptionRecord[]>([]);
+  const [loadingRedemptions, setLoadingRedemptions] = useState(true);
   const { toast } = useToast();
   const { adminRole, isAutorabitAdmin, isViewOnlyAdmin, loading: roleLoading, refreshRole } = useAdminRole();
 
   useEffect(() => {
-    generateStats();
+    fetchRedemptions();
     fetchCompanySettings();
   }, []);
+
+  const fetchRedemptions = async () => {
+    setLoadingRedemptions(true);
+    try {
+      // Fetch all redemptions with profile data
+      const { data: redemptionsData, error } = await supabase
+        .from('meal_redemptions')
+        .select(`
+          *,
+          profiles!inner(
+            full_name,
+            department,
+            company_email
+          )
+        `)
+        .order('redemption_time', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching redemptions:', error);
+      } else if (redemptionsData) {
+        const formattedRedemptions = redemptionsData.map(item => ({
+          ...item,
+          profile: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+        }));
+        
+        setRedemptions(formattedRedemptions);
+        
+        // Filter today's redemptions
+        const today = new Date().toISOString().split('T')[0];
+        const todaysRedemptions = formattedRedemptions.filter(r => 
+          r.redemption_date === today
+        );
+        setTodayRedemptions(todaysRedemptions);
+        
+        // Generate stats from real data
+        generateStatsFromData(formattedRedemptions);
+      }
+    } catch (error) {
+      console.error('Failed to fetch redemptions:', error);
+    } finally {
+      setLoadingRedemptions(false);
+    }
+  };
+
+  const generateStatsFromData = (redemptionsData: RedemptionRecord[]) => {
+    const stats: DayStats[] = [];
+    const today = new Date();
+    
+    // Generate stats for the last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayRedemptions = redemptionsData.filter(r => r.redemption_date === dateStr);
+      const redeemed = dayRedemptions.length;
+      
+      stats.push({
+        date: dateStr,
+        claimed: redeemed, // For now, claimed = redeemed since we only track actual redemptions
+        redeemed,
+        value: redeemed * 160
+      });
+    }
+    
+    setWeeklyStats(stats);
+    
+    // Calculate monthly total
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const monthlyRedemptions = redemptionsData.filter(r => {
+      const redemptionDate = new Date(r.redemption_date);
+      return redemptionDate.getMonth() === currentMonth && 
+             redemptionDate.getFullYear() === currentYear;
+    });
+    
+    setMonthlyTotal({
+      redeemed: monthlyRedemptions.length,
+      value: monthlyRedemptions.length * 160
+    });
+  };
 
   const fetchCompanySettings = async () => {
     try {
@@ -162,7 +261,7 @@ export const AdminDashboard: React.FC = () => {
     
     toast({
       title: "Report Exported",
-      description: "Monthly billing report has been downloaded.",
+      description: "Monthly billing report with employee details has been downloaded.",
     });
   };
 
@@ -170,29 +269,32 @@ export const AdminDashboard: React.FC = () => {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     
-    let csvContent = "Date,Day,Claimed,Redeemed,Value (₹)\n";
-    let totalRedeemed = 0;
+    // Get current month's redemptions
+    const monthlyRedemptions = redemptions.filter(r => {
+      const redemptionDate = new Date(r.redemption_date);
+      return redemptionDate.getMonth() === currentMonth && 
+             redemptionDate.getFullYear() === currentYear;
+    });
+    
+    let csvContent = "Date,Day,Employee Number,Employee Name,Department,Company Email,Redemption Time,Value (₹)\n";
     let totalValue = 0;
     
-    for (let day = 1; day <= Math.min(daysInMonth, today.getDate()); day++) {
-      const date = new Date(currentYear, currentMonth, day);
-      const dateStr = date.toISOString().split('T')[0];
+    monthlyRedemptions.forEach(redemption => {
+      const date = new Date(redemption.redemption_date);
       const dayName = date.toLocaleDateString('en-IN', { weekday: 'long' });
-      
-      const claimed = countCouponsForDate(dateStr, 'claimed');
-      const redeemed = countCouponsForDate(dateStr, 'redeemed');
-      const value = redeemed * 160;
-      
-      totalRedeemed += redeemed;
+      const time = new Date(redemption.redemption_time).toLocaleTimeString('en-IN');
+      const value = 160;
       totalValue += value;
       
-      csvContent += `${dateStr},${dayName},${claimed},${redeemed},${value}\n`;
-    }
+      csvContent += `${redemption.redemption_date},${dayName},${redemption.employee_number},"${redemption.profile?.full_name || 'N/A'}","${redemption.profile?.department || 'N/A'}","${redemption.profile?.company_email || 'N/A'}",${time},${value}\n`;
+    });
     
-    csvContent += `\nTOTAL,,${totalRedeemed},${totalRedeemed},${totalValue}\n`;
-    csvContent += `\nReport generated on: ${new Date().toISOString()}\n`;
+    csvContent += `\nSUMMARY\n`;
+    csvContent += `Total Redemptions:,${monthlyRedemptions.length}\n`;
+    csvContent += `Total Value:,₹${totalValue}\n`;
+    csvContent += `Average per day:,${(monthlyRedemptions.length / Math.min(today.getDate(), 31)).toFixed(1)}\n`;
+    csvContent += `\nReport generated on:,${new Date().toISOString()}\n`;
     
     return csvContent;
   };
@@ -252,9 +354,9 @@ export const AdminDashboard: React.FC = () => {
         {/* Daily Coupon Claims */}
         <Card className="shadow-elevated">
           <CardHeader>
-            <CardTitle>Daily Coupon Claims</CardTitle>
+            <CardTitle>Today's Redemptions</CardTitle>
             <p className="text-muted-foreground">
-              Track which employees claimed and redeemed coupons today
+              Track which employees redeemed coupons today ({new Date().toLocaleDateString('en-IN')})
             </p>
           </CardHeader>
           <CardContent>
@@ -263,25 +365,74 @@ export const AdminDashboard: React.FC = () => {
                 <h3 className="font-semibold mb-3">Today's Activity</h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-primary">{todayStats.claimed}</div>
-                    <p className="text-sm text-muted-foreground">Claimed</p>
+                    <div className="text-2xl font-bold text-primary">{todayRedemptions.length}</div>
+                    <p className="text-sm text-muted-foreground">Total Redemptions</p>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-success">{todayStats.redeemed}</div>
-                    <p className="text-sm text-muted-foreground">Redeemed</p>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-warning">₹{todayStats.value}</div>
+                    <div className="text-2xl font-bold text-success">₹{todayRedemptions.length * 160}</div>
                     <p className="text-sm text-muted-foreground">Total Value</p>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-warning">
+                      {todayRedemptions.length > 0 ? new Set(todayRedemptions.map(r => r.user_id)).size : 0}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Unique Employees</p>
                   </div>
                 </div>
               </div>
               
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Detailed employee tracking will be available in upcoming updates
-                </p>
-              </div>
+              {loadingRedemptions ? (
+                <div className="text-center p-4">
+                  <p className="text-muted-foreground">Loading today's redemptions...</p>
+                </div>
+              ) : todayRedemptions.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Value</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {todayRedemptions.map((redemption) => (
+                        <TableRow key={redemption.id}>
+                          <TableCell className="font-mono text-sm">
+                            {new Date(redemption.redemption_time).toLocaleTimeString('en-IN', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {redemption.profile?.full_name || 'Unknown'}
+                          </TableCell>
+                          <TableCell className="font-mono">
+                            {redemption.employee_number}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {redemption.profile?.department || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-success">
+                            ₹160
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center p-8 border rounded-lg bg-muted/50">
+                  <p className="text-muted-foreground">No redemptions today</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Employee meal redemptions will appear here
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -290,15 +441,15 @@ export const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="shadow-card">
             <CardContent className="pt-6 text-center">
-              <div className="text-2xl font-bold text-primary">{todayStats.claimed}</div>
-              <p className="text-sm text-muted-foreground">Today Claimed</p>
+              <div className="text-2xl font-bold text-primary">{todayRedemptions.length}</div>
+              <p className="text-sm text-muted-foreground">Today Redeemed</p>
             </CardContent>
           </Card>
           
           <Card className="shadow-card">
             <CardContent className="pt-6 text-center">
-              <div className="text-2xl font-bold text-success">{todayStats.redeemed}</div>
-              <p className="text-sm text-muted-foreground">Today Redeemed</p>
+              <div className="text-2xl font-bold text-success">₹{todayRedemptions.length * 160}</div>
+              <p className="text-sm text-muted-foreground">Today Value</p>
             </CardContent>
           </Card>
           
@@ -421,7 +572,7 @@ export const AdminDashboard: React.FC = () => {
                 className="w-full transition-spring hover:scale-105"
                 size="lg"
               >
-                {isAutorabitAdmin ? "Export Monthly Report (CSV)" : "Export Restricted (Autorabit Only)"}
+                {isAutorabitAdmin ? "Export Detailed Monthly Report (CSV)" : "Export Restricted (Autorabit Only)"}
               </Button>
               {!isAutorabitAdmin && (
                 <p className="text-xs text-muted-foreground text-center">
@@ -434,10 +585,14 @@ export const AdminDashboard: React.FC = () => {
                   Report Period: {new Date().toLocaleDateString('en-IN', { 
                     month: 'long', 
                     year: 'numeric' 
-                  })}
+                  })} ({redemptions.filter(r => {
+                    const redemptionDate = new Date(r.redemption_date);
+                    return redemptionDate.getMonth() === new Date().getMonth() && 
+                           redemptionDate.getFullYear() === new Date().getFullYear();
+                  }).length} records)
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Only weekdays (Monday-Friday) are included in billing
+                  Detailed CSV includes: Employee names, IDs, departments, and redemption times
                 </p>
               </div>
             </CardContent>
