@@ -4,6 +4,7 @@ import { CouponDisplay } from '@/components/CouponDisplay';
 import { KioskAdminDashboard } from '@/components/KioskAdminDashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { VendorQRGenerator } from '@/components/VendorQRGenerator';
+import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -73,124 +74,9 @@ const Index = () => {
     return <AuthPage onAuthSuccess={handleAuthSuccess} onBack={() => {}} />;
   }
 
-  // Show mode selection after authentication
+  // Show dashboard as main page after authentication
   if (mode === 'home') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <Card className="shadow-elevated text-center">
-            <CardHeader>
-              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
-              </div>
-              <CardTitle className="text-3xl">Employee Food Coupons</CardTitle>
-              <p className="text-muted-foreground">Digital meal coupon system for employees</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button
-                  onClick={handleEmployeeAccess}
-                  variant="default"
-                  size="lg"
-                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
-                  disabled={!isAutorabitEmployee}
-                >
-                  <span className="text-2xl">🍽️</span>
-                  <span>Employee Portal</span>
-                  <span className="text-xs opacity-70">Status & Scan for Meals</span>
-                  {!isAutorabitEmployee && (
-                    <span className="text-xs opacity-70">Autorabit employees only</span>
-                  )}
-                </Button>
-                
-                <Button
-                  onClick={() => setMode('kiosk_admin')}
-                  variant="secondary"
-                  size="lg"
-                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
-                >
-                  <span className="text-2xl">🏪</span>
-                  <span>Kiosk & Admin</span>
-                  <span className="text-xs opacity-70">Scan QR codes & view data</span>
-                </Button>
-              </div>
-              
-              <div className="mt-4">
-                <Button
-                  onClick={() => setMode('vendor_qr')}
-                  variant="outline"
-                  size="lg"
-                  className="w-full h-16 flex flex-col gap-1 transition-spring hover:scale-105"
-                >
-                  <span className="text-xl">🏷️</span>
-                  <span>Vendor QR Code</span>
-                  <span className="text-xs opacity-70">Display for employees to scan</span>
-                </Button>
-              </div>
-              
-              <div className="text-center space-y-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Logged in as:</strong> {user?.email}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Coupon Value:</strong> ₹160 per day
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Availability:</strong> Monday to Friday
-                </p>
-                <div className="flex gap-2 justify-center mt-4">
-                  <Button 
-                    onClick={() => setMode('profile')}
-                    variant="secondary" 
-                    size="sm"
-                  >
-                    Edit Profile
-                  </Button>
-                  <Button 
-                    onClick={handleLogout}
-                    variant="outline" 
-                    size="sm"
-                  >
-                    Logout
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg">How it works</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <span className="text-xl">1️⃣</span>
-                  </div>
-                  <p className="font-medium">Login & Claim</p>
-                  <p className="text-muted-foreground">Employees login and claim their daily coupon</p>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <span className="text-xl">2️⃣</span>
-                  </div>
-                  <p className="font-medium">Go to Cafeteria</p>
-                  <p className="text-muted-foreground">Visit the cafeteria counter</p>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <span className="text-xl">3️⃣</span>
-                  </div>
-                  <p className="font-medium">Scan Vendor QR</p>
-                  <p className="text-muted-foreground">Scan the vendor QR code to redeem meal</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <Dashboard onNavigate={(section) => setMode(section as AppMode)} />;
   }
 
   if (mode === 'employee') {
