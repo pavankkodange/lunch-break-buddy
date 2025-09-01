@@ -177,7 +177,7 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
         .from('meal_redemptions')
         .select(`
           *,
-          profiles!fk_meal_redemptions_user_id(
+          profiles(
             full_name,
             department,
             company_email
