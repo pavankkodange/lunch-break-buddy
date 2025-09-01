@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'reports' | 'vendor_qr' | 'profile';
+import { VendorReports } from '@/components/VendorReports';
+
+type AppMode = 'home' | 'employee' | 'reports' | 'vendor_reports' | 'vendor_qr' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -90,6 +92,10 @@ const Index = () => {
 
   if (mode === 'reports') {
     return <Reports onBack={handleBackToHome} />;
+  }
+
+  if (mode === 'vendor_reports') {
+    return <VendorReports onBack={handleBackToHome} />;
   }
 
   if (mode === 'vendor_qr') {

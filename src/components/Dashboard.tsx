@@ -358,9 +358,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           )}
           <ActionCard
             title="Reports & Invoices"
-            description={isAutorabitEmployee ? "Monthly coupon reports" : "Generate invoices (daily/weekly/monthly)"}
+            description={isAutorabitEmployee ? "Monthly coupon reports (CSV)" : "Generate PDF invoices (daily/weekly/monthly)"}
             icon={BarChart3}
-            onClick={() => onNavigate('reports')}
+            onClick={() => onNavigate(isAutorabitEmployee ? 'reports' : 'vendor_reports')}
             variant="secondary"
           />
           <ActionCard
