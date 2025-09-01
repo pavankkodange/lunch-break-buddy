@@ -47,7 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   });
   const [loading, setLoading] = useState(true);
   const { user, isAutorabitEmployee } = useAuth();
-  const { adminRole, isAutorabitAdmin } = useAdminRole();
+  const { adminRole, isAutorabitAdmin, hasHRAccess, loading: roleLoading } = useAdminRole();
 
   useEffect(() => {
     fetchDashboardStats();
@@ -215,7 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     </Card>
   );
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent flex items-center justify-center">
         <div className="text-center">
@@ -223,6 +223,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
           </div>
           <p className="text-lg font-semibold">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has HR access
+  if (!hasHRAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center space-y-6">
+          <Card className="shadow-elevated">
+            <CardHeader>
+              <div className="w-16 h-16 mx-auto mb-4">
+                <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
+              </div>
+              <CardTitle className="text-2xl text-destructive">Access Denied</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center space-y-3">
+                <div className="text-6xl">🚫</div>
+                <p className="text-lg font-semibold">HR Access Required</p>
+                <p className="text-muted-foreground">
+                  This dashboard is only accessible to HR administrators. Your current role is: 
+                  <Badge variant="secondary" className="ml-2">
+                    {adminRole || 'Employee'}
+                  </Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  If you believe you should have access, please contact your system administrator.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => onNavigate('employee')}
+                  variant="default"
+                  disabled={!isAutorabitEmployee}
+                >
+                  Go to Employee Portal
+                </Button>
+                <Button 
+                  onClick={() => onNavigate('kiosk_admin')}
+                  variant="outline"
+                >
+                  Access Kiosk & Admin
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -248,9 +297,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <Badge variant={isAutorabitEmployee ? "default" : "secondary"}>
                 {isAutorabitEmployee ? "AutoRABIT Employee" : "External User"}
               </Badge>
-              {isAutorabitAdmin && (
+              {hasHRAccess && (
                 <Badge variant="default">
-                  Admin Access
+                  HR Dashboard Access
                 </Badge>
               )}
             </div>

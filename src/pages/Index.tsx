@@ -42,6 +42,11 @@ const Index = () => {
     setMode('employee');
   };
 
+  const handleDashboardAccess = () => {
+    // Only allow dashboard access to HR roles
+    setMode('home'); // This will show dashboard for HR users, or access denied for others
+  };
+
   // Add loading timeout protection
   useEffect(() => {
     const timeout = setTimeout(() => {

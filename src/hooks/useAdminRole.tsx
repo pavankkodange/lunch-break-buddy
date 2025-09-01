@@ -55,6 +55,8 @@ export const useAdminRole = () => {
     refreshRole,
     isAutorabitAdmin: adminRole === 'autorabit_admin',
     isViewOnlyAdmin: adminRole === 'view_only_admin',
-    hasAdminAccess: adminRole === 'autorabit_admin' || adminRole === 'view_only_admin'
+    isHRAdmin: adminRole === 'hr_admin',
+    hasAdminAccess: adminRole === 'autorabit_admin' || adminRole === 'view_only_admin',
+    hasHRAccess: adminRole === 'hr_admin' || adminRole === 'autorabit_admin'
   };
 };
