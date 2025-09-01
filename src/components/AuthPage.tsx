@@ -4,9 +4,10 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Shield } from 'lucide-react';
+import { MapPin, Shield, Eye, EyeOff } from 'lucide-react';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
@@ -25,7 +26,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
     password: '',
     confirmPassword: '',
     employeeNumber: '',
-    fullName: ''
+    fullName: '',
+    role: ''
   });
 
   // Sign in form state
@@ -38,6 +40,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const [isPasswordUpdateMode, setIsPasswordUpdateMode] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  // Password visibility state
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
+  const [showSigninPassword, setShowSigninPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Geofencing state
   const [locationStatus, setLocationStatus] = useState<'checking' | 'allowed' | 'denied' | 'outside'>('checking');
@@ -167,6 +176,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if role is selected
+    if (!signupData.role) {
+      toast({
+        title: "Role Required",
+        description: "Please select your role (HR or Employee).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Check location first for signup as well
     if (locationStatus !== 'allowed') {
       const isLocationVerified = await checkLocationPermission();
@@ -201,7 +220,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
         data: {
           employee_number: signupData.employeeNumber,
           full_name: signupData.fullName,
-          company_email: signupData.email
+          company_email: signupData.email,
+          department: signupData.role === 'hr' ? 'HR' : 'Employee'
         }
       };
 
@@ -219,10 +239,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
       if (error) throw error;
 
       if (data.user) {
+        // Assign role to the user
+        const roleValue = signupData.role === 'hr' ? 'hr_admin' : 'employee';
+        
+        try {
+          const { error: roleError } = await supabase
+            .from('admin_roles')
+            .insert({
+              user_id: data.user.id,
+              role: roleValue
+            });
+          
+          if (roleError) {
+            console.error('Role assignment error:', roleError);
+            // Don't fail the signup for role assignment issues
+          }
+        } catch (roleAssignError) {
+          console.error('Role assignment failed:', roleAssignError);
+        }
+        
         if (data.user.email_confirmed_at || !emailVerificationEnabled) {
           toast({
             title: "Account Created!",
-            description: "Your account has been created successfully.",
+            description: `Your ${signupData.role === 'hr' ? 'HR' : 'Employee'} account has been created successfully.`,
           });
           onAuthSuccess();
         } else {
@@ -524,31 +563,61 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                     <h3 className="text-lg font-medium">Set New Password</h3>
                     <p className="text-sm text-muted-foreground">Enter and confirm your new password</p>
                   </div>
-                  <form onSubmit={handleUpdatePassword} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        placeholder="Create a new password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        required
-                        className="transition-smooth"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-new-password">Confirm New Password</Label>
-                      <Input
-                        id="confirm-new-password"
-                        type="password"
-                        placeholder="Confirm your new password"
-                        value={confirmNewPassword}
-                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        required
-                        className="transition-smooth"
-                      />
-                    </div>
+                   <form onSubmit={handleUpdatePassword} className="space-y-4">
+                     <div className="space-y-2">
+                       <Label htmlFor="new-password">New Password</Label>
+                       <div className="relative">
+                         <Input
+                           id="new-password"
+                           type={showNewPassword ? "text" : "password"}
+                           placeholder="Create a new password"
+                           value={newPassword}
+                           onChange={(e) => setNewPassword(e.target.value)}
+                           required
+                           className="transition-smooth pr-10"
+                         />
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="sm"
+                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                           onClick={() => setShowNewPassword(!showNewPassword)}
+                         >
+                           {showNewPassword ? (
+                             <EyeOff className="h-4 w-4 text-muted-foreground" />
+                           ) : (
+                             <Eye className="h-4 w-4 text-muted-foreground" />
+                           )}
+                         </Button>
+                       </div>
+                     </div>
+                     <div className="space-y-2">
+                       <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                       <div className="relative">
+                         <Input
+                           id="confirm-new-password"
+                           type={showConfirmNewPassword ? "text" : "password"}
+                           placeholder="Confirm your new password"
+                           value={confirmNewPassword}
+                           onChange={(e) => setConfirmNewPassword(e.target.value)}
+                           required
+                           className="transition-smooth pr-10"
+                         />
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="sm"
+                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                           onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                         >
+                           {showConfirmNewPassword ? (
+                             <EyeOff className="h-4 w-4 text-muted-foreground" />
+                           ) : (
+                             <Eye className="h-4 w-4 text-muted-foreground" />
+                           )}
+                         </Button>
+                       </div>
+                     </div>
                     <Button
                       type="submit"
                       className="w-full transition-spring hover:scale-105"
@@ -576,15 +645,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                     
                     <div className="space-y-2">
                       <Label htmlFor="signin-password">Password</Label>
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={signinData.password}
-                        onChange={(e) => setSigninData({...signinData, password: e.target.value})}
-                        required
-                        className="transition-smooth"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="signin-password"
+                          type={showSigninPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          value={signinData.password}
+                          onChange={(e) => setSigninData({...signinData, password: e.target.value})}
+                          required
+                          className="transition-smooth pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowSigninPassword(!showSigninPassword)}
+                        >
+                          {showSigninPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                     
                     {/* Location Status Indicator */}
@@ -736,29 +820,72 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                 </div>
                 
                 <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <Select value={signupData.role} onValueChange={(value) => setSignupData({...signupData, role: value})}>
+                    <SelectTrigger id="signup-role" className="transition-smooth">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border shadow-lg z-50">
+                      <SelectItem value="hr">HR (Admin Access)</SelectItem>
+                      <SelectItem value="employee">Employee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({...signupData, password: e.target.value})}
-                    required
-                    className="transition-smooth"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? "text" : "password"}
+                      placeholder="Create a password"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                      required
+                      className="transition-smooth pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="signup-confirm">Confirm Password</Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
-                    required
-                    className="transition-smooth"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-confirm"
+                      type={showSignupConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={signupData.confirmPassword}
+                      onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                      required
+                      className="transition-smooth pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
+                    >
+                      {showSignupConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Location Status Indicator */}
