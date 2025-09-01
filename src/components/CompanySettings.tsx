@@ -5,8 +5,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Building2, 
@@ -18,7 +20,9 @@ import {
   Mail,
   MapPin,
   CreditCard,
-  Palette
+  Palette,
+  Store,
+  Shield
 } from 'lucide-react';
 
 interface CompanySettingsData {
@@ -35,6 +39,19 @@ interface CompanySettingsData {
   secondary_color: string;
   currency: string;
   coupon_value: number;
+}
+
+interface VendorSettingsData {
+  id?: string;
+  vendor_name: string;
+  vendor_address: string;
+  vendor_email: string;
+  vendor_contact: string;
+  vendor_gst_number: string;
+  vendor_gst_percentage: number;
+  vendor_logo_url: string;
+  vendor_primary_color: string;
+  service_description: string;
 }
 
 interface CompanySettingsProps {
