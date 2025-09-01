@@ -10,6 +10,7 @@ interface ScanResult {
   success: boolean;
   employeeName?: string;
   employeeId?: string;
+  department?: string;
   amount?: number;
   message: string;
   timestamp: string;
@@ -88,7 +89,7 @@ export const KioskScanner: React.FC = () => {
       // Record the redemption in database
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('user_id, department')
         .eq('employee_number', empNo)
         .single();
 
@@ -110,6 +111,7 @@ export const KioskScanner: React.FC = () => {
         success: true,
         employeeName: name,
         employeeId: empNo,
+        department: profile?.department || 'N/A',
         amount: 160,
         message: `Meal successfully provided for ₹160`,
         timestamp: new Date().toISOString()
@@ -254,7 +256,13 @@ export const KioskScanner: React.FC = () => {
                       </div>
                       
                       {scan.employeeName && (
-                        <p className="font-medium">{scan.employeeName}</p>
+                        <div className="space-y-1">
+                          <p className="font-medium">{scan.employeeName}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {scan.employeeId && <span>ID: {scan.employeeId}</span>}
+                            {scan.department && <span>• {scan.department}</span>}
+                          </div>
+                        </div>
                       )}
                       
                       {scan.amount && (
