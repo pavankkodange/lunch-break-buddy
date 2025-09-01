@@ -166,6 +166,54 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_settings: {
+        Row: {
+          created_at: string
+          id: string
+          service_description: string | null
+          updated_at: string
+          user_id: string
+          vendor_address: string | null
+          vendor_contact: string | null
+          vendor_email: string | null
+          vendor_gst_number: string | null
+          vendor_gst_percentage: number | null
+          vendor_logo_url: string | null
+          vendor_name: string
+          vendor_primary_color: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_description?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_address?: string | null
+          vendor_contact?: string | null
+          vendor_email?: string | null
+          vendor_gst_number?: string | null
+          vendor_gst_percentage?: number | null
+          vendor_logo_url?: string | null
+          vendor_name?: string
+          vendor_primary_color?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_description?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_address?: string | null
+          vendor_contact?: string | null
+          vendor_email?: string | null
+          vendor_gst_number?: string | null
+          vendor_gst_percentage?: number | null
+          vendor_logo_url?: string | null
+          vendor_name?: string
+          vendor_primary_color?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
