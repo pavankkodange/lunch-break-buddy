@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { 
   FileText, 
   Download, 
@@ -20,6 +22,18 @@ import {
   Receipt,
   Building2
 } from 'lucide-react';
+
+interface CompanySettings {
+  company_name: string;
+  company_address: string;
+  email: string;
+  contact_number: string;
+  gst_number: string;
+  logo_url: string;
+  primary_color: string;
+  currency: string;
+  coupon_value: number;
+}
 
 interface RedemptionRecord {
   id: string;
@@ -47,6 +61,17 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [vendorReportType, setVendorReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [selectedWeek, setSelectedWeek] = useState<string>('');
+  const [companySettings, setCompanySettings] = useState<CompanySettings>({
+    company_name: 'AutoRABIT Technologies Pvt Ltd',
+    company_address: 'Bangalore, Karnataka, India',
+    email: 'info@autorabit.com',
+    contact_number: '+91-80-xxxx-xxxx',
+    gst_number: '',
+    logo_url: '/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png',
+    primary_color: '#3b82f6',
+    currency: '₹',
+    coupon_value: 160
+  });
   const { user, isAutorabitEmployee } = useAuth();
   const { hasHRAccess } = useAdminRole();
   const { toast } = useToast();
@@ -73,6 +98,7 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
 
   useEffect(() => {
     fetchRedemptions();
+    fetchCompanySettings();
   }, [selectedYear, selectedMonth, selectedDate, vendorReportType, selectedWeek, isAutorabitEmployee]);
 
   // Initialize current week
@@ -228,6 +254,28 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
     }
   };
 
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching company settings:', error);
+      } else if (data) {
+        setCompanySettings(prev => ({
+          ...prev,
+          ...data,
+          coupon_value: data.coupon_value || 160
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch company settings:', error);
+    }
+  };
+
   const generateReport = () => {
     const reportType = isAutorabitEmployee ? 'Monthly Report' : getVendorInvoiceTitle();
     const period = getReportPeriod();
@@ -341,8 +389,183 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
     }
   };
 
+  const generatePDFReport = () => {
+    const reportType = isAutorabitEmployee ? 'Monthly Report' : getVendorInvoiceTitle();
+    const period = getReportPeriod();
+    const doc = new jsPDF();
+    
+    // Set company colors from settings
+    const primaryColor = hexToRgb(companySettings.primary_color);
+    const secondaryColor = hexToRgb('#6b7280'); // Gray for secondary text
+
+    // Header section with logo and company info
+    if (companySettings.logo_url && companySettings.logo_url !== '/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png') {
+      // Add logo if available (you'd need to convert to base64 for jsPDF)
+      doc.setFontSize(20);
+    } else {
+      doc.setFontSize(20);
+    }
+    
+    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.setFont('helvetica', 'bold');
+    
+    if (isAutorabitEmployee) {
+      doc.text('AUTORABIT TECHNOLOGIES PVT LTD', 20, 25);
+      doc.setFontSize(16);
+      doc.text(reportType, 20, 35);
+    } else {
+      doc.text('INVOICE', 20, 25);
+      doc.setFontSize(12);
+      doc.setTextColor(secondaryColor.r, secondaryColor.g, secondaryColor.b);
+      doc.text(`Invoice #: INV-${Date.now()}`, 20, 35);
+      doc.text(`Invoice Date: ${new Date().toLocaleDateString('en-IN')}`, 20, 42);
+    }
+
+    // Company details
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    const companyInfo = [
+      companySettings.company_name,
+      companySettings.company_address,
+      `Email: ${companySettings.email}`,
+      `Phone: ${companySettings.contact_number}`,
+    ];
+    
+    if (companySettings.gst_number) {
+      companyInfo.push(`GST: ${companySettings.gst_number}`);
+    }
+
+    let yPos = 55;
+    companyInfo.forEach(info => {
+      doc.text(info, 20, yPos);
+      yPos += 5;
+    });
+
+    // Invoice details
+    yPos += 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Service Period: ${period}`, 20, yPos);
+    yPos += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Service Type: Employee Meal Coupon Redemption`, 20, yPos);
+    doc.text(`Rate per Meal: ${companySettings.currency}${companySettings.coupon_value}`, 20, yPos + 7);
+
+    // Table data
+    const tableData = redemptions.map((redemption, index) => [
+      String(index + 1).padStart(3, '0'),
+      redemption.redemption_date,
+      new Date(redemption.redemption_time).toLocaleTimeString('en-IN', {
+        hour12: true,
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      redemption.employee_number,
+      redemption.profile?.full_name || 'N/A',
+      redemption.profile?.department || 'N/A',
+      ...(isAutorabitEmployee ? [redemption.profile?.company_email || 'N/A'] : []),
+      `${companySettings.currency}${companySettings.coupon_value}`
+    ]);
+
+    const tableColumns = [
+      'S.No', 'Date', 'Time', 'Employee ID', 'Employee Name', 'Department',
+      ...(isAutorabitEmployee ? ['Company Email'] : []),
+      'Value'
+    ];
+
+    // Add table
+    (doc as any).autoTable({
+      head: [tableColumns],
+      body: tableData,
+      startY: yPos + 20,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [primaryColor.r, primaryColor.g, primaryColor.b],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      margin: { left: 20, right: 20 }
+    });
+
+    // Summary section
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    const totalValue = redemptions.length * companySettings.coupon_value;
+    
+    if (!isAutorabitEmployee) {
+      // Vendor invoice totals
+      const taxRate = 0.18; // 18% GST
+      const taxAmount = Math.round(totalValue * taxRate);
+      const totalWithTax = totalValue + taxAmount;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE SUMMARY', 20, finalY);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      const summaryY = finalY + 10;
+      doc.text(`Subtotal (${redemptions.length} meals × ${companySettings.currency}${companySettings.coupon_value}):`, 20, summaryY);
+      doc.text(`${companySettings.currency}${totalValue}`, 150, summaryY);
+      
+      doc.text('GST (18%):', 20, summaryY + 7);
+      doc.text(`${companySettings.currency}${taxAmount}`, 150, summaryY + 7);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total Amount Due:', 20, summaryY + 14);
+      doc.text(`${companySettings.currency}${totalWithTax}`, 150, summaryY + 14);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Unique Employees Served: ${new Set(redemptions.map(r => r.employee_number)).size}`, 20, summaryY + 25);
+      
+      // Payment terms
+      doc.setFontSize(8);
+      doc.text('Payment Terms: Net 30 Days', 20, summaryY + 35);
+    } else {
+      // AutoRABIT report summary
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REPORT SUMMARY', 20, finalY);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      const summaryY = finalY + 10;
+      doc.text(`Report Period: ${period}`, 20, summaryY);
+      doc.text(`Total Redemptions: ${redemptions.length}`, 20, summaryY + 7);
+      doc.text(`Total Value: ${companySettings.currency}${totalValue}`, 20, summaryY + 14);
+      doc.text(`Unique Employees: ${new Set(redemptions.map(r => r.employee_number)).size}`, 20, summaryY + 21);
+    }
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, 20, pageHeight - 20);
+    doc.text(`Generated by: ${user?.email || 'System'}`, 20, pageHeight - 15);
+
+    return doc;
+  };
+
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 59, g: 130, b: 246 }; // Default blue
+  };
+
   const downloadReport = () => {
-    const csvContent = generateReport();
+    const doc = generatePDFReport();
     const reportType = isAutorabitEmployee ? 'monthly-report' : `${vendorReportType}-invoice`;
     const period = isAutorabitEmployee 
       ? `${selectedYear}-${selectedMonth.padStart(2, '0')}`
@@ -351,22 +574,14 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
         : vendorReportType === 'weekly'
           ? `week-${selectedWeek}`
           : `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
-    const filename = `food-coupon-${reportType}-${period}.csv`;
+    const filename = `food-coupon-${reportType}-${period}.pdf`;
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    doc.save(filename);
     
     const documentType = isAutorabitEmployee ? 'Report' : 'Invoice';
     toast({
       title: `${documentType} Downloaded`,
-      description: `${getVendorInvoiceTitle() || 'Monthly report'} has been downloaded successfully.`,
+      description: `${getVendorInvoiceTitle() || 'Monthly report'} has been downloaded as PDF successfully.`,
     });
   };
 
@@ -667,7 +882,7 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                Download {isAutorabitEmployee ? 'Report' : 'Invoice'}
+                Download PDF {isAutorabitEmployee ? 'Report' : 'Invoice'}
               </Button>
             </div>
           </CardHeader>

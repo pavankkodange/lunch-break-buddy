@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { CompanySettings } from './CompanySettings';
 import { 
   TrendingUp, 
   Users, 
@@ -13,7 +14,8 @@ import {
   Activity,
   QrCode,
   User,
-  BarChart3
+  BarChart3,
+  Settings
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -45,6 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     todayActivity: []
   });
   const [loading, setLoading] = useState(true);
+  const [showCompanySettings, setShowCompanySettings] = useState(false);
   const { user, isAutorabitEmployee } = useAuth();
   const { adminRole, isAutorabitAdmin, hasHRAccess, loading: roleLoading } = useAdminRole();
 
@@ -72,7 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         .from('meal_redemptions')
         .select(`
           *,
-          profiles!fk_meal_redemptions_user_id(
+          profiles(
             full_name,
             department
           )
@@ -92,7 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         .from('meal_redemptions')
         .select(`
           *,
-          profiles!fk_meal_redemptions_user_id(
+          profiles(
             full_name,
             department
           )
@@ -213,6 +216,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </CardContent>
     </Card>
   );
+
+  if (showCompanySettings) {
+    return <CompanySettings onBack={() => setShowCompanySettings(false)} />;
+  }
 
   if (loading || roleLoading) {
     return (
@@ -340,7 +347,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isAutorabitEmployee && (
             <ActionCard
               title="Employee Portal"
@@ -363,6 +370,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => onNavigate('vendor_qr')}
             variant="outline"
           />
+          {hasHRAccess && (
+            <ActionCard
+              title="Company Settings"
+              description="Configure company details and branding"
+              icon={Settings}
+              onClick={() => setShowCompanySettings(true)}
+              variant="secondary"
+            />
+          )}
         </div>
 
         {/* Daily Redemptions Table */}
