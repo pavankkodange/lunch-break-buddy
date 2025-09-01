@@ -41,6 +41,19 @@ const Index = () => {
     setMode('employee');
   };
 
+  // Add loading timeout protection
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Loading timeout - forcing app to continue');
+        // Force continue by refreshing the page if stuck too long
+        window.location.reload();
+      }
+    }, 15000); // 15 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -49,6 +62,7 @@ const Index = () => {
             <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
           </div>
           <p className="mt-2">Loading...</p>
+          <p className="text-xs text-muted-foreground mt-2">Initializing your session...</p>
         </div>
       </div>
     );
