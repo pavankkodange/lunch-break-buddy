@@ -168,6 +168,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_hr_role: {
+        Args: { assigner_user_id: string; target_user_id: string }
+        Returns: boolean
+      }
       create_or_get_profile: {
         Args: {
           p_company_email?: string
