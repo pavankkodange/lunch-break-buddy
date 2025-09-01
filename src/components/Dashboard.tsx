@@ -26,6 +26,7 @@ interface DashboardStats {
   monthlyValue: number;
   uniqueEmployees: number;
   recentActivity: any[];
+  todayActivity: any[];
 }
 
 interface DashboardProps {
@@ -41,7 +42,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     monthlyRedemptions: 0,
     monthlyValue: 0,
     uniqueEmployees: 0,
-    recentActivity: []
+    recentActivity: [],
+    todayActivity: []
   });
   const [loading, setLoading] = useState(true);
   const { user, isAutorabitEmployee } = useAuth();
@@ -66,11 +68,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const monthStartStr = monthStart.toISOString().split('T')[0];
 
-      // Fetch today's redemptions
+      // Fetch today's redemptions with profile data
       const { data: todayData, error: todayError } = await supabase
         .from('meal_redemptions')
-        .select('*')
-        .eq('redemption_date', todayStr);
+        .select(`
+          *,
+          profiles!fk_meal_redemptions_user_id(
+            full_name,
+            department
+          )
+        `)
+        .eq('redemption_date', todayStr)
+        .order('redemption_time', { ascending: false });
 
       // Fetch this week's redemptions
       const { data: weekData, error: weekError } = await supabase
@@ -96,6 +105,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       if (!todayError && todayData) {
         const todayCount = todayData.length;
+        const todayActivityFormatted = todayData.map(item => ({
+          ...item,
+          profile: item.profiles
+        }));
         
         if (!weekError && weekData) {
           const weekCount = weekData.length;
@@ -115,7 +128,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               recentActivity: monthData.slice(0, 5).map(item => ({
                 ...item,
                 profile: item.profiles
-              }))
+              })),
+              todayActivity: todayActivityFormatted
             });
           }
         }
@@ -296,55 +310,104 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
         </div>
 
-        {/* Recent Activity */}
-        {stats.recentActivity.length > 0 && (
-          <Card className="shadow-elevated">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Recent Activity
-              </CardTitle>
-              <p className="text-muted-foreground">Latest meal redemptions this month</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {stats.recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {activity.profile?.full_name || `Employee ${activity.employee_number}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.profile?.department || 'N/A'} • ID: {activity.employee_number}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-success">₹160</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.redemption_date).toLocaleDateString('en-IN')}
-                      </p>
-                    </div>
+        {/* Daily Redemptions Table */}
+        <Card className="shadow-elevated">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Daily Redemptions Log
+            </CardTitle>
+            <p className="text-muted-foreground">Complete list of today's meal redemptions</p>
+          </CardHeader>
+          <CardContent>
+            {stats.todayRedemptions === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-semibold text-muted-foreground">No redemptions today</p>
+                <p className="text-sm text-muted-foreground">Redemptions will appear here as employees scan for meals</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4 text-center bg-muted/50 p-4 rounded-lg">
+                  <div>
+                    <p className="text-2xl font-bold text-primary">{stats.todayRedemptions}</p>
+                    <p className="text-sm text-muted-foreground">Total Redemptions</p>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-2xl font-bold text-success">₹{stats.todayValue}</p>
+                    <p className="text-sm text-muted-foreground">Total Value</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-warning">
+                      {new Set(stats.todayActivity?.map(r => r.employee_number) || []).size}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Unique Employees</p>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left p-3 font-semibold">S.No</th>
+                          <th className="text-left p-3 font-semibold">Time</th>
+                          <th className="text-left p-3 font-semibold">Employee Name</th>
+                          <th className="text-left p-3 font-semibold">Employee ID</th>
+                          <th className="text-left p-3 font-semibold">Department</th>
+                          <th className="text-left p-3 font-semibold">Value</th>
+                          <th className="text-left p-3 font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(stats.todayActivity || []).map((activity, index) => (
+                          <tr key={activity.id} className="border-t hover:bg-muted/30">
+                            <td className="p-3 font-mono text-sm">{String(index + 1).padStart(3, '0')}</td>
+                            <td className="p-3 text-sm">
+                              {new Date(activity.redemption_time).toLocaleTimeString('en-IN', {
+                                hour12: true,
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td className="p-3">
+                              <div className="font-medium">
+                                {activity.profile?.full_name || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="p-3 font-mono text-sm">
+                              {activity.employee_number}
+                            </td>
+                            <td className="p-3 text-sm">
+                              {activity.profile?.department || 'N/A'}
+                            </td>
+                            <td className="p-3">
+                              <span className="font-semibold text-success">₹160</span>
+                            </td>
+                            <td className="p-3">
+                              <Badge variant="default" className="bg-success">
+                                Redeemed
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <Button 
+                    onClick={() => onNavigate('kiosk_admin')} 
+                    variant="outline"
+                  >
+                    View Full Admin Dashboard for More Details
+                  </Button>
+                </div>
               </div>
-              
-              <div className="mt-4 pt-4 border-t">
-                <Button 
-                  onClick={() => onNavigate('kiosk_admin')} 
-                  variant="outline" 
-                  className="w-full"
-                >
-                  View Full Admin Dashboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* System Info */}
         <Card className="shadow-card">
