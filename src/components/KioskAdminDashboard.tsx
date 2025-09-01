@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Scanner } from './ui/scanner';
+import { AdminDashboard } from './AdminDashboard';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,7 +18,7 @@ interface ScanResult {
   timestamp: string;
 }
 
-export const KioskScanner: React.FC = () => {
+export const KioskAdminDashboard: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanResult[]>([]);
   const [dailyCount, setDailyCount] = useState(0);
@@ -161,7 +163,7 @@ export const KioskScanner: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <Card className="shadow-elevated">
           <CardHeader className="text-center">
@@ -169,14 +171,14 @@ export const KioskScanner: React.FC = () => {
               <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
             </div>
             <CardTitle className="text-2xl flex items-center justify-center gap-3">
-              <span className="text-3xl">📱</span>
-              Food Coupon Kiosk Scanner
+              <span className="text-3xl">🏪</span>
+              Kiosk & Admin Dashboard
             </CardTitle>
-            <p className="text-muted-foreground">Scan employee QR codes to redeem meal coupons</p>
+            <p className="text-muted-foreground">Scan QR codes and manage meal redemptions</p>
           </CardHeader>
         </Card>
 
-        {/* Stats */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="shadow-card">
             <CardContent className="pt-6 text-center">
@@ -204,79 +206,92 @@ export const KioskScanner: React.FC = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Scanner */}
-          <Card className="shadow-elevated">
-            <CardHeader>
-              <CardTitle>QR Code Scanner</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isScanning ? (
-                <div className="text-center space-y-4">
-                  <div className="text-6xl">📷</div>
-                  <Button 
-                    onClick={() => setIsScanning(true)}
-                    size="lg"
-                    className="w-full transition-spring hover:scale-105"
-                  >
-                    Start Scanning
-                  </Button>
-                </div>
-              ) : (
-                <Scanner
-                  onScan={handleScan}
-                  onClose={() => setIsScanning(false)}
-                  isActive={isScanning}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Scans */}
-          <Card className="shadow-elevated">
-            <CardHeader>
-              <CardTitle>Recent Scans</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {recentScans.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    No scans yet today
-                  </p>
-                ) : (
-                  recentScans.map((scan, index) => (
-                    <div key={index} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant={scan.success ? "default" : "destructive"}>
-                          {scan.success ? "Success" : "Failed"}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(scan.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      
-                      {scan.employeeName && (
-                        <div className="space-y-1">
-                          <p className="font-medium">{scan.employeeName}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {scan.employeeId && <span>ID: {scan.employeeId}</span>}
-                            {scan.department && <span>• {scan.department}</span>}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {scan.amount && (
-                        <p className="text-success font-semibold">₹{scan.amount}</p>
-                      )}
-                      
-                      <p className="text-sm text-muted-foreground">{scan.message}</p>
+        <Tabs defaultValue="scanner" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="scanner">QR Scanner</TabsTrigger>
+            <TabsTrigger value="dashboard">View All Data</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="scanner" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Scanner */}
+              <Card className="shadow-elevated">
+                <CardHeader>
+                  <CardTitle>QR Code Scanner</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!isScanning ? (
+                    <div className="text-center space-y-4">
+                      <div className="text-6xl">📷</div>
+                      <Button 
+                        onClick={() => setIsScanning(true)}
+                        size="lg"
+                        className="w-full transition-spring hover:scale-105"
+                      >
+                        Start Scanning
+                      </Button>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  ) : (
+                    <Scanner
+                      onScan={handleScan}
+                      onClose={() => setIsScanning(false)}
+                      isActive={isScanning}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Scans */}
+              <Card className="shadow-elevated">
+                <CardHeader>
+                  <CardTitle>Recent Scans</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {recentScans.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">
+                        No scans yet today
+                      </p>
+                    ) : (
+                      recentScans.map((scan, index) => (
+                        <div key={index} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Badge variant={scan.success ? "default" : "destructive"}>
+                              {scan.success ? "Success" : "Failed"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(scan.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          
+                          {scan.employeeName && (
+                            <div className="space-y-1">
+                              <p className="font-medium">{scan.employeeName}</p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {scan.employeeId && <span>ID: {scan.employeeId}</span>}
+                                {scan.department && <span>• {scan.department}</span>}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {scan.amount && (
+                            <p className="text-success font-semibold">₹{scan.amount}</p>
+                          )}
+                          
+                          <p className="text-sm text-muted-foreground">{scan.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="dashboard">
+            <AdminDashboard />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

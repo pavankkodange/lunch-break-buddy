@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
-import { KioskScanner } from '@/components/KioskScanner';
-import { AdminDashboard } from '@/components/AdminDashboard';
+import { KioskAdminDashboard } from '@/components/KioskAdminDashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'kiosk' | 'admin' | 'profile';
+type AppMode = 'home' | 'employee' | 'kiosk_admin' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -87,7 +86,7 @@ const Index = () => {
               <p className="text-muted-foreground">Digital meal coupon system for employees</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
                   onClick={handleEmployeeAccess}
                   variant="default"
@@ -103,23 +102,14 @@ const Index = () => {
                 </Button>
                 
                 <Button
-                  onClick={() => setMode('kiosk')}
+                  onClick={() => setMode('kiosk_admin')}
                   variant="secondary"
                   size="lg"
                   className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
                 >
-                  <span className="text-2xl">📱</span>
-                  <span>Kiosk Scanner</span>
-                </Button>
-                
-                <Button
-                  onClick={() => setMode('admin')}
-                  variant="outline"
-                  size="lg"
-                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
-                >
-                  <span className="text-2xl">📊</span>
-                  <span>Admin Dashboard</span>
+                  <span className="text-2xl">🏪</span>
+                  <span>Kiosk & Admin</span>
+                  <span className="text-xs opacity-70">Scan QR codes & view data</span>
                 </Button>
               </div>
               
@@ -192,7 +182,7 @@ const Index = () => {
     return <CouponDisplay onLogout={handleLogout} onBack={handleBackToHome} />;
   }
 
-  if (mode === 'kiosk') {
+  if (mode === 'kiosk_admin') {
     return (
       <div>
         <div className="fixed top-4 left-4 z-50">
@@ -200,20 +190,7 @@ const Index = () => {
             ← Back to Home
           </Button>
         </div>
-        <KioskScanner />
-      </div>
-    );
-  }
-
-  if (mode === 'admin') {
-    return (
-      <div>
-        <div className="fixed top-4 left-4 z-50">
-          <Button onClick={() => setMode('home')} variant="outline">
-            ← Back to Home
-          </Button>
-        </div>
-        <AdminDashboard />
+        <KioskAdminDashboard />
       </div>
     );
   }
