@@ -190,14 +190,14 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
           </CardContent>
         </Card>
 
-        {/* Employee QR Code */}
+        {/* Meal Redemption Status */}
         <Card className="shadow-elevated">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2">
               <span>🍽️</span>
-              Your Employee QR Code
+              Meal Redemption
             </CardTitle>
-            <p className="text-lg text-muted-foreground">Show this at the kiosk for meals</p>
+            <p className="text-lg text-muted-foreground">Scan vendor QR code to get your meal</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {todayRedeemed ? (
@@ -209,22 +209,19 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
                 </p>
               </div>
             ) : (
-              <div className="bg-white p-6 rounded-lg border-2 border-primary shadow-coupon">
-                <div className="text-center mb-4">
-                  <p className="text-sm font-medium text-primary">
-                    {isWeekday ? "Scan at Kiosk for ₹160 Meal" : "Available on Weekdays Only"}
+              <div className="bg-white p-6 rounded-lg border-2 border-primary shadow-coupon text-center">
+                <div className="text-6xl mb-4">📱</div>
+                <div className="space-y-3">
+                  <p className="text-lg font-semibold text-primary">
+                    {isWeekday ? "Ready to Scan for ₹160 Meal" : "Available on Weekdays Only"}
                   </p>
-                </div>
-                <div className="flex justify-center">
-                  <QRCode
-                    value={generateEmployeeQR()}
-                    size={200}
-                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                  />
-                </div>
-                <div className="text-center mt-4 space-y-1">
-                  <p className="text-sm font-medium">{profile.full_name}</p>
-                  <p className="text-xs text-muted-foreground">ID: {profile.employee_number}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Go to cafeteria counter and scan the vendor QR code
+                  </p>
+                  <div className="pt-2">
+                    <p className="text-sm font-medium">{profile.full_name}</p>
+                    <p className="text-xs text-muted-foreground">ID: {profile.employee_number}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -256,9 +253,10 @@ export const CouponDisplay: React.FC<CouponDisplayProps> = ({ onLogout, onBack }
             <div className="text-center space-y-2">
               <h3 className="font-semibold">How it works:</h3>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>1. Show your QR code at the kiosk</p>
-                <p>2. One meal per day (weekdays only)</p>
-                <p>3. ₹160 value per meal</p>
+                <p>1. Go to the cafeteria counter</p>
+                <p>2. Use "Scan for Meal" to scan vendor QR code</p>
+                <p>3. One meal per day (weekdays only)</p>
+                <p>4. ₹160 value per meal</p>
               </div>
             </div>
           </CardContent>

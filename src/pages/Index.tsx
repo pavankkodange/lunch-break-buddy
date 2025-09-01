@@ -3,12 +3,14 @@ import { AuthPage } from '@/components/AuthPage';
 import { CouponDisplay } from '@/components/CouponDisplay';
 import { KioskAdminDashboard } from '@/components/KioskAdminDashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
+import { EmployeeScanner } from '@/components/EmployeeScanner';
+import { VendorQRGenerator } from '@/components/VendorQRGenerator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AppMode = 'home' | 'employee' | 'kiosk_admin' | 'profile';
+type AppMode = 'home' | 'employee' | 'scanner' | 'kiosk_admin' | 'vendor_qr' | 'profile';
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
@@ -86,7 +88,7 @@ const Index = () => {
               <p className="text-muted-foreground">Digital meal coupon system for employees</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button
                   onClick={handleEmployeeAccess}
                   variant="default"
@@ -95,7 +97,21 @@ const Index = () => {
                   disabled={!isAutorabitEmployee}
                 >
                   <span className="text-2xl">👤</span>
-                  <span>Employee Portal</span>
+                  <span>View Status</span>
+                  {!isAutorabitEmployee && (
+                    <span className="text-xs opacity-70">Autorabit employees only</span>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => setMode('scanner')}
+                  variant="default"
+                  size="lg"
+                  className="h-24 flex flex-col gap-2 transition-spring hover:scale-105"
+                  disabled={!isAutorabitEmployee}
+                >
+                  <span className="text-2xl">📱</span>
+                  <span>Scan for Meal</span>
                   {!isAutorabitEmployee && (
                     <span className="text-xs opacity-70">Autorabit employees only</span>
                   )}
@@ -110,6 +126,19 @@ const Index = () => {
                   <span className="text-2xl">🏪</span>
                   <span>Kiosk & Admin</span>
                   <span className="text-xs opacity-70">Scan QR codes & view data</span>
+                </Button>
+              </div>
+              
+              <div className="mt-4">
+                <Button
+                  onClick={() => setMode('vendor_qr')}
+                  variant="outline"
+                  size="lg"
+                  className="w-full h-16 flex flex-col gap-1 transition-spring hover:scale-105"
+                >
+                  <span className="text-xl">🏷️</span>
+                  <span>Vendor QR Code</span>
+                  <span className="text-xs opacity-70">Display for employees to scan</span>
                 </Button>
               </div>
               
@@ -160,15 +189,15 @@ const Index = () => {
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                     <span className="text-xl">2️⃣</span>
                   </div>
-                  <p className="font-medium">Show QR Code</p>
-                  <p className="text-muted-foreground">Present QR code at food kiosk</p>
+                  <p className="font-medium">Go to Cafeteria</p>
+                  <p className="text-muted-foreground">Visit the cafeteria counter</p>
                 </div>
                 <div className="text-center space-y-2">
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                     <span className="text-xl">3️⃣</span>
                   </div>
-                  <p className="font-medium">Scan & Redeem</p>
-                  <p className="text-muted-foreground">Kiosk scans and validates the coupon</p>
+                  <p className="font-medium">Scan Vendor QR</p>
+                  <p className="text-muted-foreground">Scan the vendor QR code to redeem meal</p>
                 </div>
               </div>
             </CardContent>
@@ -182,6 +211,10 @@ const Index = () => {
     return <CouponDisplay onLogout={handleLogout} onBack={handleBackToHome} />;
   }
 
+  if (mode === 'scanner') {
+    return <EmployeeScanner onBack={handleBackToHome} />;
+  }
+
   if (mode === 'kiosk_admin') {
     return (
       <div>
@@ -191,6 +224,19 @@ const Index = () => {
           </Button>
         </div>
         <KioskAdminDashboard />
+      </div>
+    );
+  }
+
+  if (mode === 'vendor_qr') {
+    return (
+      <div>
+        <div className="fixed top-4 left-4 z-50">
+          <Button onClick={() => setMode('home')} variant="outline">
+            ← Back to Home
+          </Button>
+        </div>
+        <VendorQRGenerator />
       </div>
     );
   }
