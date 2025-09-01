@@ -81,11 +81,15 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
       const today = new Date();
       const startOfWeek = new Date(today);
       startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
-      setSelectedWeek(startOfWeek.toISOString().split('T')[0]);
+      const weekString = startOfWeek.toISOString().split('T')[0];
+      console.log('Initializing week to:', weekString);
+      setSelectedWeek(weekString);
     }
-  }, [vendorReportType]);
+  }, [vendorReportType, selectedWeek]);
 
   const getDateRange = () => {
+    console.log('Getting date range for:', { vendorReportType, selectedWeek, selectedYear, selectedMonth, selectedDate });
+    
     if (isAutorabitEmployee) {
       // Monthly report for AutoRABIT employees
       const year = parseInt(selectedYear);
@@ -100,19 +104,51 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
           return { startDate: selectedDate, endDate: selectedDate };
         
         case 'weekly':
+          if (!selectedWeek) {
+            console.error('Selected week is empty for weekly report');
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+            const fallbackWeek = startOfWeek.toISOString().split('T')[0];
+            console.log('Using fallback week:', fallbackWeek);
+            
+            const weekStart = new Date(fallbackWeek);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+            return { 
+              startDate: weekStart.toISOString().split('T')[0], 
+              endDate: weekEnd.toISOString().split('T')[0] 
+            };
+          }
+          
           const weekStart = new Date(selectedWeek);
           const weekEnd = new Date(weekStart);
           weekEnd.setDate(weekStart.getDate() + 6); // Sunday
-          return { 
+          const dateRange = { 
             startDate: weekStart.toISOString().split('T')[0], 
             endDate: weekEnd.toISOString().split('T')[0] 
           };
+          console.log('Weekly date range:', dateRange);
+          return dateRange;
         
         case 'monthly':
           const year = parseInt(selectedYear);
           const month = parseInt(selectedMonth);
+          
+          if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+            console.error('Invalid year or month for monthly report:', { year, month });
+            const now = new Date();
+            const fallbackYear = now.getFullYear();
+            const fallbackMonth = now.getMonth() + 1;
+            const startDate = new Date(fallbackYear, fallbackMonth - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(fallbackYear, fallbackMonth, 0).toISOString().split('T')[0];
+            console.log('Using fallback monthly range:', { startDate, endDate });
+            return { startDate, endDate };
+          }
+          
           const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
           const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+          console.log('Monthly date range:', { startDate, endDate });
           return { startDate, endDate };
         
         default:
@@ -125,6 +161,17 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRange();
+      console.log('Fetching redemptions from', startDate, 'to', endDate);
+
+      if (!startDate || !endDate) {
+        console.error('Invalid date range:', { startDate, endDate });
+        toast({
+          title: "Error",
+          description: "Invalid date range selected.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { data: redemptionsData, error } = await supabase
         .from('meal_redemptions')
@@ -141,7 +188,7 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
         .order('redemption_time', { ascending: false });
 
       if (error) {
-        console.error('Error fetching redemptions:', error);
+        console.error('Error fetching redemptions with profiles:', error);
         // Fallback without profile data
         const { data: simpleData, error: simpleError } = await supabase
           .from('meal_redemptions')
@@ -154,10 +201,11 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
           console.error('Error fetching simple redemptions:', simpleError);
           toast({
             title: "Error",
-            description: "Failed to fetch redemption data.",
+            description: `Failed to fetch redemption data: ${simpleError.message}`,
             variant: "destructive"
           });
         } else if (simpleData) {
+          console.log('Successfully fetched redemptions without profiles:', simpleData.length);
           setRedemptions(simpleData);
         }
       } else if (redemptionsData) {
@@ -165,13 +213,14 @@ export const Reports: React.FC<ReportsProps> = ({ onBack }) => {
           ...item,
           profile: item.profiles
         }));
+        console.log('Successfully fetched redemptions with profiles:', formattedRedemptions.length);
         setRedemptions(formattedRedemptions);
       }
     } catch (error) {
       console.error('Failed to fetch redemptions:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch redemption data.",
+        description: `Failed to fetch redemption data: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
