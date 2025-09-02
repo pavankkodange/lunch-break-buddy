@@ -21,37 +21,6 @@ import {
   LogOut
 } from 'lucide-react';
 
-// PDF font helpers: embed Roboto Regular and Bold for proper Unicode rendering and consistent spacing
-let robotoRegularBase64: string | null = null;
-let robotoBoldBase64: string | null = null;
-
-async function fetchFontBase64(path: string): Promise<string> {
-  if (!path) return '';
-  const res = await fetch(path);
-  const buf = await res.arrayBuffer();
-  let binary = '';
-  const bytes = new Uint8Array(buf);
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize) as any);
-  }
-  return btoa(binary);
-}
-
-async function ensurePdfFonts(doc: any) {
-  if (!robotoRegularBase64) {
-    robotoRegularBase64 = await fetchFontBase64('/fonts/roboto/Roboto-Regular.ttf');
-  }
-  if (!robotoBoldBase64) {
-    robotoBoldBase64 = await fetchFontBase64('/fonts/roboto/Roboto-Bold.ttf');
-  }
-  // Register fonts for this document
-  doc.addFileToVFS('Roboto-Regular.ttf', robotoRegularBase64!);
-  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-  doc.addFileToVFS('Roboto-Bold.ttf', robotoBoldBase64!);
-  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
-}
-
 interface CompanySettings {
   company_name: string;
   company_address: string;
@@ -298,12 +267,9 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     }
   };
 
-  const generatePDFInvoice = async () => {
+  const generatePDFInvoice = () => {
     const period = getInvoicePeriod();
     const doc = new jsPDF();
-
-    // Ensure embedded Unicode fonts for correct rendering
-    await ensurePdfFonts(doc);
     
     // Set company colors from settings
     const primaryColor = hexToRgb(companySettings.primary_color);
@@ -311,25 +277,25 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
 
     // Header section
     doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(24);
     doc.text('INVOICE', 20, 25);
     
     doc.setFontSize(12);
     doc.setTextColor(secondaryColor.r, secondaryColor.g, secondaryColor.b);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(`Invoice #: INV-${Date.now()}`, 20, 35);
     doc.text(`Invoice Date: ${new Date().toLocaleDateString('en-IN')}`, 20, 42);
     doc.text(`Invoice Period: ${period}`, 20, 49);
 
     // Company details
     doc.setFontSize(10);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('BILL TO:', 20, 65);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     const companyInfo = [
       companySettings.company_name,
@@ -349,9 +315,9 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     });
 
     // Vendor details (right side)
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('FROM:', 120, 65);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     const vendorInfo = [
       'External Food Service Provider',
@@ -368,25 +334,25 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     // Service details
     yPos += 10;
     doc.setFontSize(12);
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(`Service Period: ${period}`, 20, yPos);
     yPos += 7;
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(`Service Type: Employee Meal Coupon Redemption`, 20, yPos);
     doc.text(`Rate per Meal: ${companySettings.currency}${companySettings.coupon_value}`, 20, yPos + 7);
 
-    // Table data
+    // Table data - ensure proper string conversion and formatting
     const tableData = redemptions.map((redemption, index) => [
-      String(index + 1).padStart(3, '0'),
-      redemption.redemption_date,
+      (index + 1).toString().padStart(3, '0'),
+      redemption.redemption_date || '',
       new Date(redemption.redemption_time).toLocaleTimeString('en-IN', {
         hour12: true,
         hour: '2-digit',
         minute: '2-digit'
       }),
-      redemption.employee_number,
-      redemption.profile?.full_name || 'N/A',
-      redemption.profile?.department || 'N/A',
+      redemption.employee_number || '',
+      (redemption.profile?.full_name || 'N/A').toString(),
+      (redemption.profile?.department || 'N/A').toString(),
       `${companySettings.currency}${companySettings.coupon_value}`
     ]);
 
@@ -394,35 +360,39 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
       'S.No', 'Date', 'Time', 'Employee ID', 'Employee Name', 'Department', 'Amount'
     ];
 
-    // Add table
+    // Add table with improved formatting
     autoTable(doc, {
       head: [tableColumns],
       body: tableData,
       startY: yPos + 20,
       styles: {
-        font: 'Roboto',
-        fontSize: 9,
-        cellPadding: 3,
+        font: 'helvetica',
+        fontSize: 8,
+        cellPadding: { top: 3, right: 2, bottom: 3, left: 2 },
+        overflow: 'linebreak',
+        halign: 'left',
+        valign: 'middle',
       },
       headStyles: {
-        font: 'Roboto',
-        fontStyle: 'bold',
         fillColor: [primaryColor.r, primaryColor.g, primaryColor.b],
         textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center',
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252]
       },
-      margin: { left: 20, right: 20 },
       columnStyles: {
-        0: { cellWidth: 18 }, // S.No
-        1: { cellWidth: 24 }, // Date
-        2: { cellWidth: 22 }, // Time
-        3: { cellWidth: 30 }, // Employee ID
-        4: { cellWidth: 48 }, // Name
-        5: { cellWidth: 32 }, // Department
-        6: { cellWidth: 26, halign: 'right' }, // Amount
-      }
+        0: { halign: 'center', cellWidth: 15 }, // S.No - center aligned
+        1: { halign: 'center', cellWidth: 22 }, // Date - center aligned
+        2: { halign: 'center', cellWidth: 20 }, // Time - center aligned
+        3: { halign: 'center', cellWidth: 28 }, // Employee ID - center aligned
+        4: { halign: 'left', cellWidth: 50 }, // Name - left aligned, wider
+        5: { halign: 'left', cellWidth: 35 }, // Department - left aligned
+        6: { halign: 'right', cellWidth: 20 }, // Amount - right aligned
+      },
+      margin: { left: 15, right: 15 },
+      tableWidth: 'auto'
     });
 
     // Invoice totals
@@ -433,10 +403,10 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     const totalWithTax = totalValue + taxAmount;
     
     doc.setFontSize(12);
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('INVOICE TOTALS', 20, finalY);
     
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     
     const summaryY = finalY + 10;
@@ -452,12 +422,12 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     const lineY = companySettings.gst_number ? summaryY + 14 : summaryY + 7;
     doc.line(20, lineY, 180, lineY);
     
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.text('TOTAL AMOUNT DUE:', 20, lineY + 10);
     doc.text(`${companySettings.currency}${totalWithTax}`, 150, lineY + 10);
     
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     const detailsY = companySettings.gst_number ? lineY + 20 : lineY + 20;
     doc.text(`Meals Served: ${redemptions.length} × ${companySettings.currency}${companySettings.coupon_value} = ${companySettings.currency}${totalValue}`, 20, detailsY);
@@ -465,9 +435,9 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     
     // Payment terms
     doc.setFontSize(9);
-    doc.setFont('Roboto', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT TERMS:', 20, detailsY + 20);
-    doc.setFont('Roboto', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text('Net 30 Days from invoice date', 20, detailsY + 27);
 
     // Footer
@@ -515,9 +485,9 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     }
   };
 
-  const downloadInvoice = async () => {
+  const downloadInvoice = () => {
     try {
-      const doc = await generatePDFInvoice();
+      const doc = generatePDFInvoice();
       const period = reportType === 'daily' 
         ? selectedDate
         : reportType === 'weekly'
