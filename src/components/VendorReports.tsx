@@ -345,14 +345,14 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
     const tableData = redemptions.map((redemption, index) => [
       (index + 1).toString().padStart(3, '0'),
       redemption.redemption_date || '',
-      new Date(redemption.redemption_time).toLocaleTimeString('en-IN', {
+      redemption.redemption_time ? new Date(redemption.redemption_time).toLocaleTimeString('en-IN', {
         hour12: true,
         hour: '2-digit',
         minute: '2-digit'
-      }),
+      }) : '',
       redemption.employee_number || '',
-      (redemption.profile?.full_name || 'N/A').toString(),
-      (redemption.profile?.department || 'N/A').toString(),
+      redemption.profile?.full_name || 'N/A',
+      redemption.profile?.department || 'N/A',
       `${companySettings.currency}${companySettings.coupon_value}`
     ]);
 
@@ -366,9 +366,8 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
       body: tableData,
       startY: yPos + 20,
       styles: {
-        font: 'helvetica',
         fontSize: 8,
-        cellPadding: { top: 3, right: 2, bottom: 3, left: 2 },
+        cellPadding: 3,
         overflow: 'linebreak',
         halign: 'left',
         valign: 'middle',
@@ -383,16 +382,15 @@ export const VendorReports: React.FC<VendorReportsProps> = ({ onBack }) => {
         fillColor: [248, 250, 252]
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 15 }, // S.No - center aligned
-        1: { halign: 'center', cellWidth: 22 }, // Date - center aligned
-        2: { halign: 'center', cellWidth: 20 }, // Time - center aligned
-        3: { halign: 'center', cellWidth: 28 }, // Employee ID - center aligned
-        4: { halign: 'left', cellWidth: 50 }, // Name - left aligned, wider
-        5: { halign: 'left', cellWidth: 35 }, // Department - left aligned
-        6: { halign: 'right', cellWidth: 20 }, // Amount - right aligned
+        0: { halign: 'center', cellWidth: 15 }, // S.No
+        1: { halign: 'center', cellWidth: 24 }, // Date
+        2: { halign: 'center', cellWidth: 20 }, // Time
+        3: { halign: 'center', cellWidth: 28 }, // Employee ID
+        4: { halign: 'left', cellWidth: 45 }, // Name
+        5: { halign: 'left', cellWidth: 32 }, // Department
+        6: { halign: 'right', cellWidth: 22 }, // Amount
       },
-      margin: { left: 15, right: 15 },
-      tableWidth: 'auto'
+      margin: { left: 15, right: 15 }
     });
 
     // Invoice totals
