@@ -54,14 +54,29 @@ const Index = () => {
 
   // Auto-redirect regular employees to employee portal
   useEffect(() => {
-    if (isAuthenticated && mode === 'home' && !loading && !roleLoading) {
-      const isVendor = user?.email && !user.email.includes('@autorabit.com');
-      
-      // If user is a regular employee (autorabit employee but not HR admin)
-      if (isAutorabitEmployee && !hasHRAccess && !isVendor) {
-        console.log('Regular employee detected, redirecting to employee portal');
-        setMode('employee');
-      }
+    // Only run redirect logic after both auth and role are FULLY loaded
+    if (!isAuthenticated || mode !== 'home' || loading || roleLoading) {
+      return; // Don't do anything if still loading
+    }
+    
+    const isVendor = user?.email && !user.email.includes('@autorabit.com');
+    
+    // Log current state for debugging
+    console.log('Checking redirect:', { 
+      isAutorabitEmployee, 
+      hasHRAccess, 
+      isVendor,
+      email: user?.email 
+    });
+    
+    // If user is a regular employee (autorabit employee but not HR admin and role check is complete)
+    if (isAutorabitEmployee && !hasHRAccess && !isVendor) {
+      console.log('Regular employee confirmed, redirecting to employee portal');
+      setMode('employee');
+    } else if (hasHRAccess) {
+      console.log('HR access confirmed, staying on dashboard');
+    } else if (isVendor) {
+      console.log('Vendor confirmed, staying on dashboard');
     }
   }, [isAuthenticated, mode, loading, roleLoading, isAutorabitEmployee, hasHRAccess, user]);
 
