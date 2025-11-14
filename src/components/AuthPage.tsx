@@ -1040,7 +1040,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                     setUserLocation({ lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng });
                     toast({
                       title: "🎭 Demo Mode Enabled",
-                      description: "Location check bypassed. Use test credentials below.",
+                      description: "Quick login buttons available below.",
                     });
                   } else {
                     setLocationStatus('checking');
@@ -1057,47 +1057,134 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
               
               {demoMode && (
                 <div className="mt-2 p-3 bg-primary/10 rounded-lg text-left border border-primary/20">
-                  <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Demo Test Credentials</h4>
-                  <div className="space-y-3 text-xs">
-                    <div className="bg-amber-500/20 border border-amber-500/50 p-2 rounded">
-                      <p className="font-bold text-amber-700 dark:text-amber-300">📝 IMPORTANT: Use "Sign Up" tab first!</p>
-                      <p className="text-muted-foreground">These accounts don't exist yet. Create them using the credentials below.</p>
+                  <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Quick Demo Login</h4>
+                  <div className="space-y-2">
+                    {/* Quick Login Buttons */}
+                    <div className="grid gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setIsLoading(true);
+                          try {
+                            const { error } = await supabase.auth.signInWithPassword({
+                              email: 'hr@autorabit.com',
+                              password: 'HR123456!'
+                            });
+                            if (error) {
+                              if (error.message.includes('Invalid login credentials')) {
+                                toast({
+                                  title: "Account Not Found",
+                                  description: "HR account doesn't exist. Use 'Sign Up' tab to create it first with: hr@autorabit.com",
+                                  variant: "destructive"
+                                });
+                              } else {
+                                throw error;
+                              }
+                            }
+                          } catch (error: any) {
+                            toast({
+                              title: "Login Failed",
+                              description: error.message,
+                              variant: "destructive"
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="justify-start"
+                      >
+                        👔 Login as HR Manager
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setIsLoading(true);
+                          try {
+                            const { error } = await supabase.auth.signInWithPassword({
+                              email: 'employee@autorabit.com',
+                              password: 'Emp123456!'
+                            });
+                            if (error) {
+                              if (error.message.includes('Invalid login credentials')) {
+                                toast({
+                                  title: "Account Not Found",
+                                  description: "Employee account doesn't exist. Use 'Sign Up' tab to create it first with: employee@autorabit.com",
+                                  variant: "destructive"
+                                });
+                              } else {
+                                throw error;
+                              }
+                            }
+                          } catch (error: any) {
+                            toast({
+                              title: "Login Failed",
+                              description: error.message,
+                              variant: "destructive"
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="justify-start"
+                      >
+                        👤 Login as Employee
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setIsLoading(true);
+                          try {
+                            const { error } = await supabase.auth.signInWithPassword({
+                              email: 'vendor@food.com',
+                              password: 'Vendor123!'
+                            });
+                            if (error) {
+                              if (error.message.includes('Invalid login credentials')) {
+                                toast({
+                                  title: "Account Not Found",
+                                  description: "Vendor account doesn't exist. Use 'Sign Up' tab to create it first with: vendor@food.com",
+                                  variant: "destructive"
+                                });
+                              } else {
+                                throw error;
+                              }
+                            }
+                          } catch (error: any) {
+                            toast({
+                              title: "Login Failed",
+                              description: error.message,
+                              variant: "destructive"
+                            });
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="justify-start"
+                      >
+                        🏪 Login as Vendor
+                      </Button>
                     </div>
                     
-                    {/* HR Account */}
-                    <div className="bg-background/50 p-2 rounded border border-primary/30">
-                      <p className="font-medium mb-1 text-primary">👔 HR Account</p>
-                      <p><strong>Email:</strong> hr@autorabit.com</p>
-                      <p><strong>Password:</strong> HR123456!</p>
-                      <p><strong>Employee #:</strong> HR001</p>
-                      <p><strong>Name:</strong> HR Manager</p>
-                      <p><strong>Role:</strong> HR</p>
-                      <p className="text-muted-foreground mt-1 italic">Select "Employee (Internal)" account type</p>
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      <p className="mb-1">📝 First time? Create accounts via 'Sign Up' tab with:</p>
+                      <ul className="list-disc list-inside space-y-1 ml-1">
+                        <li><strong>HR:</strong> hr@autorabit.com / HR123456!</li>
+                        <li><strong>Employee:</strong> employee@autorabit.com / Emp123456!</li>
+                        <li><strong>Vendor:</strong> vendor@food.com / Vendor123!</li>
+                      </ul>
+                      <p className="mt-2 italic">⚠️ Location verification bypassed in demo mode</p>
                     </div>
-                    
-                    {/* Employee Account */}
-                    <div className="bg-background/50 p-2 rounded border border-primary/30">
-                      <p className="font-medium mb-1 text-blue-600">👤 Employee Account</p>
-                      <p><strong>Email:</strong> employee@autorabit.com</p>
-                      <p><strong>Password:</strong> Emp123456!</p>
-                      <p><strong>Employee #:</strong> EMP001</p>
-                      <p><strong>Name:</strong> Demo Employee</p>
-                      <p><strong>Role:</strong> Software Engineer</p>
-                      <p className="text-muted-foreground mt-1 italic">Select "Employee (Internal)" account type</p>
-                    </div>
-                    
-                    {/* Vendor Account */}
-                    <div className="bg-background/50 p-2 rounded border border-primary/30">
-                      <p className="font-medium mb-1 text-green-600">🏪 Vendor Account</p>
-                      <p><strong>Email:</strong> vendor@food.com</p>
-                      <p><strong>Password:</strong> Vendor123!</p>
-                      <p><strong>Name:</strong> Vendor Partner</p>
-                      <p className="text-muted-foreground mt-1 italic">Select "Vendor (External)" account type</p>
-                    </div>
-                    
-                    <p className="text-muted-foreground italic">
-                      ⚠️ Location verification is bypassed in demo mode
-                    </p>
                   </div>
                 </div>
               )}
