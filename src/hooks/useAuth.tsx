@@ -46,12 +46,11 @@ export const useAuth = () => {
         }
         if (!mounted) return;
         
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) {
+        console.log('Initial session check:', session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        // Always set loading to false after checking session
         setLoading(false);
-      }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
         if (mounted) setLoading(false);
