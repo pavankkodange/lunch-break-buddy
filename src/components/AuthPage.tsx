@@ -1059,6 +1059,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                 <div className="mt-2 p-3 bg-primary/10 rounded-lg text-left border border-primary/20">
                   <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Demo Test Credentials</h4>
                   <div className="space-y-3 text-xs">
+                    <div className="bg-amber-500/20 border border-amber-500/50 p-2 rounded">
+                      <p className="font-bold text-amber-700 dark:text-amber-300">📝 IMPORTANT: Use "Sign Up" tab first!</p>
+                      <p className="text-muted-foreground">These accounts don't exist yet. Create them using the credentials below.</p>
+                    </div>
+                    
                     {/* HR Account */}
                     <div className="bg-background/50 p-2 rounded border border-primary/30">
                       <p className="font-medium mb-1 text-primary">👔 HR Account</p>
@@ -1067,6 +1072,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                       <p><strong>Employee #:</strong> HR001</p>
                       <p><strong>Name:</strong> HR Manager</p>
                       <p><strong>Role:</strong> HR</p>
+                      <p className="text-muted-foreground mt-1 italic">Select "Employee (Internal)" account type</p>
                     </div>
                     
                     {/* Employee Account */}
@@ -1077,6 +1083,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                       <p><strong>Employee #:</strong> EMP001</p>
                       <p><strong>Name:</strong> Demo Employee</p>
                       <p><strong>Role:</strong> Software Engineer</p>
+                      <p className="text-muted-foreground mt-1 italic">Select "Employee (Internal)" account type</p>
                     </div>
                     
                     {/* Vendor Account */}
@@ -1085,7 +1092,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                       <p><strong>Email:</strong> vendor@food.com</p>
                       <p><strong>Password:</strong> Vendor123!</p>
                       <p><strong>Name:</strong> Vendor Partner</p>
-                      <p className="text-muted-foreground mt-1 italic">Note: Select "Vendor (External)" as account type</p>
+                      <p className="text-muted-foreground mt-1 italic">Select "Vendor (External)" account type</p>
                     </div>
                     
                     <p className="text-muted-foreground italic">
