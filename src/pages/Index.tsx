@@ -78,7 +78,8 @@ const Index = () => {
     return () => clearTimeout(timeout);
   }, [loading]);
 
-  if (loading && !isAuthenticated) {
+  // Show loading screen while authenticating or determining roles
+  if (loading || (isAuthenticated && roleLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -86,7 +87,9 @@ const Index = () => {
             <img src="/lovable-uploads/3d9649e2-b28f-4172-84c3-7b8510a34429.png" alt="AutoRABIT" className="w-full h-full object-contain" />
           </div>
           <p className="mt-2">Loading...</p>
-          <p className="text-xs text-muted-foreground mt-2">Initializing your session...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {loading ? 'Initializing your session...' : 'Verifying your role...'}
+          </p>
         </div>
       </div>
     );
