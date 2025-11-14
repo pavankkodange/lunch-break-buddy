@@ -1059,6 +1059,53 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                 <div className="mt-2 p-3 bg-primary/10 rounded-lg text-left border border-primary/20">
                   <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Quick Demo Login</h4>
                   <div className="space-y-2">
+                    {/* Create Demo Accounts Button */}
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={async () => {
+                        setIsLoading(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-demo-accounts');
+                          
+                          if (error) throw error;
+                          
+                          if (data?.success) {
+                            const created = data.results.filter((r: any) => r.status === 'created').length;
+                            const existing = data.results.filter((r: any) => r.status === 'already_exists').length;
+                            
+                            toast({
+                              title: "✅ Demo Accounts Ready!",
+                              description: `${created} accounts created, ${existing} already existed. You can now login with any role below.`,
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('Error creating demo accounts:', error);
+                          toast({
+                            title: "Error Creating Accounts",
+                            description: error.message || "Failed to create demo accounts. Please try again.",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      🎯 Create All Demo Accounts
+                    </Button>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-primary/10 px-2 text-muted-foreground">Then login as</span>
+                      </div>
+                    </div>
+                    
                     {/* Quick Login Buttons */}
                     <div className="grid gap-2">
                       <Button
@@ -1076,7 +1123,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                               if (error.message.includes('Invalid login credentials')) {
                                 toast({
                                   title: "Account Not Found",
-                                  description: "HR account doesn't exist. Use 'Sign Up' tab to create it first with: hr@autorabit.com",
+                                  description: "Click 'Create All Demo Accounts' button first to set up HR account.",
                                   variant: "destructive"
                                 });
                               } else {
@@ -1114,7 +1161,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                               if (error.message.includes('Invalid login credentials')) {
                                 toast({
                                   title: "Account Not Found",
-                                  description: "Employee account doesn't exist. Use 'Sign Up' tab to create it first with: employee@autorabit.com",
+                                  description: "Click 'Create All Demo Accounts' button first to set up Employee account.",
                                   variant: "destructive"
                                 });
                               } else {
@@ -1152,7 +1199,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                               if (error.message.includes('Invalid login credentials')) {
                                 toast({
                                   title: "Account Not Found",
-                                  description: "Vendor account doesn't exist. Use 'Sign Up' tab to create it first with: vendor@food.com",
+                                  description: "Click 'Create All Demo Accounts' button first to set up Vendor account.",
                                   variant: "destructive"
                                 });
                               } else {
@@ -1177,13 +1224,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
                     </div>
                     
                     <div className="text-xs text-muted-foreground pt-2 border-t">
-                      <p className="mb-1">📝 First time? Create accounts via 'Sign Up' tab with:</p>
-                      <ul className="list-disc list-inside space-y-1 ml-1">
-                        <li><strong>HR:</strong> hr@autorabit.com / HR123456!</li>
-                        <li><strong>Employee:</strong> employee@autorabit.com / Emp123456!</li>
-                        <li><strong>Vendor:</strong> vendor@food.com / Vendor123!</li>
-                      </ul>
-                      <p className="mt-2 italic">⚠️ Location verification bypassed in demo mode</p>
+                      <p className="italic">⚠️ Location verification bypassed in demo mode</p>
+                      <p className="mt-1"><strong>Tip:</strong> Click the create button above, then choose your role to login!</p>
                     </div>
                   </div>
                 </div>
