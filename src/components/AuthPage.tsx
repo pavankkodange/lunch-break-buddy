@@ -54,6 +54,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showLocationDebug, setShowLocationDebug] = useState(false);
   const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
 
   // Office coordinates - Twitza Building, Hyderabad
   // Updated to actual office location: 17.433749°N, 78.375504°E
@@ -77,6 +78,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
 
   // Check if user is within office location
   const checkLocationPermission = async () => {
+    // Skip location check in demo mode
+    if (demoMode) {
+      setLocationStatus('allowed');
+      setUserLocation({ lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng });
+      return true;
+    }
+
     if (!navigator.geolocation) {
       setLocationStatus('denied');
       toast({
@@ -1019,6 +1027,54 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
               <span>Office location access required (Plus Code: C9MF+PW)</span>
             </div>
             
+            {/* Demo Mode Toggle */}
+            <div className="mt-3 border-t pt-3">
+              <Button
+                type="button"
+                variant={demoMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setDemoMode(!demoMode);
+                  if (!demoMode) {
+                    setLocationStatus('allowed');
+                    setUserLocation({ lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng });
+                    toast({
+                      title: "🎭 Demo Mode Enabled",
+                      description: "Location check bypassed. Use test credentials below.",
+                    });
+                  } else {
+                    setLocationStatus('checking');
+                    toast({
+                      title: "Demo Mode Disabled",
+                      description: "Location verification required again.",
+                    });
+                  }
+                }}
+                className="text-xs"
+              >
+                {demoMode ? '🎭 Demo Mode ON' : '🎭 Enable Demo Mode'}
+              </Button>
+              
+              {demoMode && (
+                <div className="mt-2 p-3 bg-primary/10 rounded-lg text-left border border-primary/20">
+                  <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Demo Test Credentials</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="bg-background/50 p-2 rounded">
+                      <p className="font-medium mb-1">Sign Up with:</p>
+                      <p><strong>Email:</strong> test@autorabit.com</p>
+                      <p><strong>Password:</strong> Test123!</p>
+                      <p><strong>Employee #:</strong> AR12345</p>
+                      <p><strong>Name:</strong> Demo User</p>
+                      <p><strong>Role:</strong> Software Engineer</p>
+                    </div>
+                    <p className="text-muted-foreground italic">
+                      ⚠️ Location verification is bypassed in demo mode
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Location Debug Panel */}
             <div className="mt-3">
               <Button
@@ -1033,37 +1089,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
               
               {showLocationDebug && (
                 <div className="mt-2 p-3 bg-muted rounded-lg text-left">
-                  <h4 className="font-semibold text-sm mb-2">Location Debug Info</h4>
-                  <div className="space-y-1 text-xs">
-                    <p><strong>Status:</strong> {locationStatus}</p>
-                    {userLocation && (
-                      <>
-                        <p><strong>Your Location:</strong></p>
-                        <p className="ml-2">Lat: {userLocation.lat.toFixed(6)}</p>
-                        <p className="ml-2">Lng: {userLocation.lng.toFixed(6)}</p>
-                        <p><strong>Office Location:</strong></p>
-                        <p className="ml-2">Lat: {OFFICE_LOCATION.lat.toFixed(6)}</p>
-                        <p className="ml-2">Lng: {OFFICE_LOCATION.lng.toFixed(6)}</p>
-                        <p><strong>Distance:</strong> {Math.round(calculateDistance(
-                          userLocation.lat, 
-                          userLocation.lng, 
-                          OFFICE_LOCATION.lat, 
-                          OFFICE_LOCATION.lng
-                        ))}m</p>
-                        <div className="mt-2 pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">
-                            📍 Copy your current coordinates to update office location:
-                          </p>
-                          <code className="text-xs bg-background p-1 rounded block mt-1">
-                            lat: {userLocation.lat.toFixed(6)}, lng: {userLocation.lng.toFixed(6)}
-                          </code>
-                        </div>
-                      </>
-                    )}
-                    {!userLocation && locationStatus !== 'checking' && (
-                      <p className="text-orange-600">No location data available</p>
-                    )}
-                  </div>
+...
                 </div>
               )}
             </div>
