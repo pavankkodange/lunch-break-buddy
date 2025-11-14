@@ -1058,15 +1058,36 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onBack }) => 
               {demoMode && (
                 <div className="mt-2 p-3 bg-primary/10 rounded-lg text-left border border-primary/20">
                   <h4 className="font-semibold text-sm mb-2 text-primary">🎭 Demo Test Credentials</h4>
-                  <div className="space-y-2 text-xs">
-                    <div className="bg-background/50 p-2 rounded">
-                      <p className="font-medium mb-1">Sign Up with:</p>
-                      <p><strong>Email:</strong> test@autorabit.com</p>
-                      <p><strong>Password:</strong> Test123!</p>
-                      <p><strong>Employee #:</strong> AR12345</p>
-                      <p><strong>Name:</strong> Demo User</p>
+                  <div className="space-y-3 text-xs">
+                    {/* HR Account */}
+                    <div className="bg-background/50 p-2 rounded border border-primary/30">
+                      <p className="font-medium mb-1 text-primary">👔 HR Account</p>
+                      <p><strong>Email:</strong> hr@autorabit.com</p>
+                      <p><strong>Password:</strong> HR123456!</p>
+                      <p><strong>Employee #:</strong> HR001</p>
+                      <p><strong>Name:</strong> HR Manager</p>
+                      <p><strong>Role:</strong> HR</p>
+                    </div>
+                    
+                    {/* Employee Account */}
+                    <div className="bg-background/50 p-2 rounded border border-primary/30">
+                      <p className="font-medium mb-1 text-blue-600">👤 Employee Account</p>
+                      <p><strong>Email:</strong> employee@autorabit.com</p>
+                      <p><strong>Password:</strong> Emp123456!</p>
+                      <p><strong>Employee #:</strong> EMP001</p>
+                      <p><strong>Name:</strong> Demo Employee</p>
                       <p><strong>Role:</strong> Software Engineer</p>
                     </div>
+                    
+                    {/* Vendor Account */}
+                    <div className="bg-background/50 p-2 rounded border border-primary/30">
+                      <p className="font-medium mb-1 text-green-600">🏪 Vendor Account</p>
+                      <p><strong>Email:</strong> vendor@food.com</p>
+                      <p><strong>Password:</strong> Vendor123!</p>
+                      <p><strong>Name:</strong> Vendor Partner</p>
+                      <p className="text-muted-foreground mt-1 italic">Note: Select "Vendor (External)" as account type</p>
+                    </div>
+                    
                     <p className="text-muted-foreground italic">
                       ⚠️ Location verification is bypassed in demo mode
                     </p>
