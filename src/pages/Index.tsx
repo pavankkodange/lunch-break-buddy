@@ -8,6 +8,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useToast } from '@/hooks/use-toast';
 
 import { VendorReports } from '@/components/VendorReports';
@@ -17,6 +18,7 @@ type AppMode = 'home' | 'employee' | 'reports' | 'vendor_reports' | 'vendor_qr' 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>('home');
   const { isAuthenticated, loading, signOut, isAutorabitEmployee, user } = useAuth();
+  const { hasHRAccess, loading: roleLoading } = useAdminRole();
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -30,6 +32,7 @@ const Index = () => {
 
   const handleAuthSuccess = () => {
     // User is authenticated, show mode selection
+    // Will be handled by useEffect below to route based on role
   };
 
   const handleEmployeeAccess = () => {
@@ -48,6 +51,19 @@ const Index = () => {
     // Only allow dashboard access to HR roles
     setMode('home'); // This will show dashboard for HR users, or access denied for others
   };
+
+  // Auto-redirect regular employees to employee portal
+  useEffect(() => {
+    if (isAuthenticated && mode === 'home' && !loading && !roleLoading) {
+      const isVendor = user?.email && !user.email.includes('@autorabit.com');
+      
+      // If user is a regular employee (autorabit employee but not HR admin)
+      if (isAutorabitEmployee && !hasHRAccess && !isVendor) {
+        console.log('Regular employee detected, redirecting to employee portal');
+        setMode('employee');
+      }
+    }
+  }, [isAuthenticated, mode, loading, roleLoading, isAutorabitEmployee, hasHRAccess, user]);
 
   // Add loading timeout protection
   useEffect(() => {
