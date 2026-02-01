@@ -88,8 +88,11 @@ async def get_company_settings():
         }
     return response.data[0]
 
+from models import CompanySettingsUpdate
+
 @router.post("/settings")
-async def update_company_settings(settings: Dict):
+async def update_company_settings(settings: CompanySettingsUpdate):
+    settings_dict = settings.model_dump(exclude_unset=True)
     supabase = get_supabase()
     # Check if settings exist
     existing = supabase.table("company_settings").select("id").limit(1).execute()
@@ -101,9 +104,9 @@ async def update_company_settings(settings: Dict):
     for _ in range(max_retries):
         try:
             if existing.data:
-                response = supabase.table("company_settings").update(settings).eq("id", existing.data[0]["id"]).execute()
+                response = supabase.table("company_settings").update(settings_dict).eq("id", existing.data[0]["id"]).execute()
             else:
-                response = supabase.table("company_settings").insert(settings).execute()
+                response = supabase.table("company_settings").insert(settings_dict).execute()
             return response.data[0]
         except Exception as e:
             # Check for PostgREST error code PGRST204 (Column not found)

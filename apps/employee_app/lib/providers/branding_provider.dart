@@ -15,6 +15,7 @@ class BrandingNotifier extends Notifier<Map<String, dynamic>> {
       'company_name': 'AutoRabit',
       'autorabit_primary_color': '#1E40AF',
       'autorabit_logo_url': '',
+      'autorabit_favicon_url': '',
       'autorabit_website': '',
       'autorabit_gst_number': '',
       'autorabit_contact_primary': '',

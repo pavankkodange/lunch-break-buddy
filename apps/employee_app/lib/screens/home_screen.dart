@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../providers/branding_provider.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
+import 'menu_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -17,10 +18,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
-  final List<String> _titles = ['Home', 'Meal History', 'My Profile'];
+  final List<String> _titles = ['Home', 'Today\'s Menu', 'Meal History', 'My Profile'];
   
   final List<Widget> _screens = [
     const ScanTab(),
+    const MenuScreen(),
     const HistoryScreen(),
     const ProfileScreen(),
   ];
@@ -66,6 +68,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: Icon(Icons.home_rounded),
               activeIcon: Icon(Icons.home_rounded, size: 28),
               label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.restaurant_menu),
+              activeIcon: Icon(Icons.restaurant_menu, size: 28),
+              label: 'Menu',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.history),
@@ -197,7 +204,7 @@ class _ScanTabState extends ConsumerState<ScanTab> {
               padding: const EdgeInsets.all(32.0),
               child: Column(
                 children: [
-                  Text('Daily Allowance', style: TextStyle(color: primaryColor.withOpacity(0.6), fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+                   Text('Daily Allowance', style: TextStyle(color: primaryColor.withOpacity(0.6), fontWeight: FontWeight.w600, letterSpacing: 1.2)),
                   const SizedBox(height: 12),
                   Text('₹$couponValue', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: primaryColor.withOpacity(0.8))),
                   const SizedBox(height: 16),
@@ -212,7 +219,7 @@ class _ScanTabState extends ConsumerState<ScanTab> {
                         ),
                         child: Row(
                           children: [
-                            Icon(_todayRedeemed ? Icons.check_circle : Icons.info_outline, size: 16, color: _todayRedeemed ? Colors.green : primaryColor),
+                             Icon(_todayRedeemed ? Icons.check_circle : Icons.info_outline, size: 16, color: _todayRedeemed ? Colors.green : primaryColor),
                             const SizedBox(width: 8),
                             Text(
                               _todayRedeemed ? 'Redeemed' : 'Available',
@@ -227,46 +234,7 @@ class _ScanTabState extends ConsumerState<ScanTab> {
               ),
             ),
           ),
-          const SizedBox(height: 32),
-
-          // DYNAMIC VENDOR BROADCAST CARD
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.grey.shade100, width: 2),
-              boxShadow: [
-                BoxShadow(color: Colors.orange.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("Today's Specials", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20)),
-                      child: Text("LIVE", style: TextStyle(fontSize: 10, color: Colors.orange.shade800, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildDynamicItem("Cafeteria Menu", _settings['todays_special'] ?? "Check back soon for today's specials!", Icons.restaurant),
-                if (_settings['active_offers'] != null && _settings['active_offers'].toString().isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 12),
-                  _buildDynamicItem("Special Offers", _settings['active_offers'], Icons.local_offer, isAccent: true),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
 
           if (!_todayRedeemed)
             _isScanning
@@ -321,7 +289,7 @@ class _ScanTabState extends ConsumerState<ScanTab> {
               children: [
                 const Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
                 const SizedBox(height: 16),
-                const Text('Enjoy your meal!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                 const Text('Enjoy your meal!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
                 const SizedBox(height: 8),
                 const Text("How was the food today?", style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 16),
@@ -338,33 +306,6 @@ class _ScanTabState extends ConsumerState<ScanTab> {
             ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDynamicItem(String title, String content, IconData icon, {bool isAccent = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isAccent ? Colors.orange.shade50 : Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 20, color: isAccent ? Colors.orange.shade700 : Colors.blue.shade700),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(content, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, height: 1.4)),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -128,7 +128,7 @@ class _QRDashboardTabState extends ConsumerState<QRDashboardTab> {
     final data = {
       'vendorId': 'autorabit-cafeteria',
       'type': 'vendor_redemption',
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      // Static QR for stable printing
     };
     return base64Encode(utf8.encode(jsonEncode(data)));
   }
@@ -218,9 +218,21 @@ class _QRDashboardTabState extends ConsumerState<QRDashboardTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  const Text(
+                    'Vendor QR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
-                    'Dynamic QR - Refreshes on load',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontStyle: FontStyle.italic),
+                    'Scan to redeem',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),

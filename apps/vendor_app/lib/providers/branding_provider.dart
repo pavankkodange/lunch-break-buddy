@@ -14,6 +14,12 @@ class BrandingNotifier extends Notifier<Map<String, dynamic>> {
       'vendor_name': 'AutoRabit Cafeteria',
       'vendor_brand_color': '#EA580C',
       'vendor_logo_url': '',
+      'vendor_email': '',
+      'vendor_address': '',
+      'vendor_contact': '',
+      'vendor_gst_number': '',
+      'vendor_gst_percentage': 18.0,
+      'vendor_description': '',
     };
   }
 

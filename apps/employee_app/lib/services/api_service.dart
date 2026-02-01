@@ -47,6 +47,24 @@ class ApiService {
         .match({'user_id': user.id});
   }
 
+  Future<void> updatePreferences({
+    bool? isVegetarian,
+    bool? lunchTimerReminder,
+    bool? darkModeEnabled,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+
+    final updates = <String, dynamic>{};
+    if (isVegetarian != null) updates['is_vegetarian'] = isVegetarian;
+    if (lunchTimerReminder != null) updates['lunch_timer_reminder'] = lunchTimerReminder;
+    if (darkModeEnabled != null) updates['dark_mode_enabled'] = darkModeEnabled;
+
+    if (updates.isEmpty) return;
+
+    await _client.from('profiles').update(updates).match({'user_id': user.id});
+  }
+
   Future<void> recordRedemption(String employeeNumber) async {
     final user = _client.auth.currentUser;
     if (user == null) return;

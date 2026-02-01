@@ -217,9 +217,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 const Text("Preferences", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
-                _buildPreferenceToggle("Vegetarian Preference", true, Icons.eco_outlined, primaryColor),
-                _buildPreferenceToggle("Lunch Reminders", true, Icons.notifications_none_outlined, primaryColor),
-                _buildPreferenceToggle("Dark Mode", false, Icons.dark_mode_outlined, primaryColor),
+                _buildPreferenceToggle(
+                  "Vegetarian Preference",
+                  _profile?['is_vegetarian'] ?? false,
+                  Icons.eco_outlined,
+                  primaryColor,
+                  (val) async {
+                     setState(() => _profile?['is_vegetarian'] = val);
+                     await _apiService.updatePreferences(isVegetarian: val);
+                  },
+                ),
+                _buildPreferenceToggle(
+                  "Lunch Reminders",
+                  _profile?['lunch_timer_reminder'] ?? true,
+                  Icons.notifications_none_outlined,
+                  primaryColor,
+                  (val) async {
+                     setState(() => _profile?['lunch_timer_reminder'] = val);
+                     await _apiService.updatePreferences(lunchTimerReminder: val);
+                  },
+                ),
+                _buildPreferenceToggle(
+                  "Dark Mode",
+                  _profile?['dark_mode_enabled'] ?? false,
+                  Icons.dark_mode_outlined,
+                  primaryColor,
+                  (val) async {
+                     setState(() => _profile?['dark_mode_enabled'] = val);
+                     await _apiService.updatePreferences(darkModeEnabled: val);
+                  },
+                ),
               ],
             ),
           ),
@@ -268,7 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildPreferenceToggle(String title, bool value, IconData icon, Color activeColor) {
+  Widget _buildPreferenceToggle(String title, bool value, IconData icon, Color activeColor, Function(bool) onChanged) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -279,9 +306,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Switch.adaptive(
             value: value,
             activeColor: activeColor,
-            onChanged: (v) {
-              setState(() {}); // For demo interactivity
-            },
+            onChanged: onChanged,
           ),
         ],
       ),
